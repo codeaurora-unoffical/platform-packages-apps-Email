@@ -17,7 +17,6 @@
 package com.android.email.mail.store;
 
 import com.android.email.Email;
-import com.android.email.PeekableInputStream;
 import com.android.email.Utility;
 import com.android.email.mail.AuthenticationFailedException;
 import com.android.email.mail.CertificateValidationException;
@@ -112,7 +111,8 @@ public class ImapStore extends Store {
     /**
      * Static named constructor.
      */
-    public static Store newInstance(String uri, Context context) throws MessagingException {
+    public static Store newInstance(String uri, Context context, PersistentDataCallbacks callbacks)
+            throws MessagingException {
         return new ImapStore(uri);
     }
 
@@ -325,7 +325,8 @@ public class ImapStore extends Store {
             this.mName = name;
         }
 
-        public void open(OpenMode mode) throws MessagingException {
+        public void open(OpenMode mode, PersistentDataCallbacks callbacks)
+                throws MessagingException {
             if (isOpen() && mMode == mode) {
                 // Make sure the connection is valid. If it's not we'll close it down and continue
                 // on to get a new one.
@@ -480,7 +481,8 @@ public class ImapStore extends Store {
         }
 
         @Override
-        public void copyMessages(Message[] messages, Folder folder) throws MessagingException {
+        public void copyMessages(Message[] messages, Folder folder, 
+                MessageUpdateCallbacks callbacks) throws MessagingException {
             checkOpen();
             String[] uids = new String[messages.length];
             for (int i = 0, count = messages.length; i < count; i++) {

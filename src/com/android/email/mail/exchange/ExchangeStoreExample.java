@@ -16,11 +16,15 @@
 
 package com.android.email.mail.exchange;
 
+import com.android.email.Email;
 import com.android.email.mail.Folder;
 import com.android.email.mail.MessagingException;
 import com.android.email.mail.Store;
+import com.android.email.mail.StoreSynchronizer;
 
 import android.content.Context;
+import android.util.Config;
+import android.util.Log;
 
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -36,19 +40,23 @@ import java.util.HashMap;
  * to res/xml/stores.xml
  */
 public class ExchangeStoreExample extends Store {
+    public static final String LOG_TAG = "ExchangeStoreExample";
     
     private final Context mContext;
     private URI mUri;
+    private PersistentDataCallbacks mCallbacks;
 
     private final ExchangeTransportExample mTransport;
     private final HashMap<String, Folder> mFolders = new HashMap<String, Folder>();
+    
+    private boolean mPushModeRunning = false;
 
     /**
      * Factory method.
      */
-    public static Store newInstance(String uri, Context context)
+    public static Store newInstance(String uri, Context context, PersistentDataCallbacks callbacks)
     throws MessagingException {
-        return new ExchangeStoreExample(uri, context);
+        return new ExchangeStoreExample(uri, context, callbacks);
     }
 
     /**
@@ -58,13 +66,15 @@ public class ExchangeStoreExample extends Store {
      * @param application
      * @throws MessagingException
      */
-    private ExchangeStoreExample(String _uri, Context context) throws MessagingException {
+    private ExchangeStoreExample(String _uri, Context context, PersistentDataCallbacks callbacks)
+            throws MessagingException {
         mContext = context;
         try {
             mUri = new URI(_uri);
         } catch (URISyntaxException e) {
             throw new MessagingException("Invalid uri for ExchangeStoreExample");
         }
+        mCallbacks = callbacks;
 
         String scheme = mUri.getScheme();
         int connectionSecurity;
@@ -112,12 +122,67 @@ public class ExchangeStoreExample extends Store {
     }
     
     /**
+     * For a store that supports push mode, this is the API that enables it or disables it.
+     * The store should use this API to start or stop its persistent connection service or thread.
+     * 
+     * <p>Note, may be called multiple times, even after push mode has been started or stopped.
+     * 
+     * @param enablePushMode start or stop push mode delivery
+     */
+    @Override
+    public void enablePushModeDelivery(boolean enablePushMode) {
+        if (Config.LOGD && Email.DEBUG) {
+            if (enablePushMode && !mPushModeRunning) {
+                Log.d(Email.LOG_TAG, "start push mode");
+            } else if (!enablePushMode && mPushModeRunning) {
+                Log.d(Email.LOG_TAG, "stop push mode");
+            } else {
+                Log.d(Email.LOG_TAG, enablePushMode ?
+                        "push mode already started" : "push mode already stopped");
+            }
+        }
+        mPushModeRunning = enablePushMode;
+    }
+    
+    /**
      * Get class of SettingActivity for this Store class.
      * @return Activity class that has class method actionEditIncomingSettings(). 
      */
     @Override
     public Class<? extends android.app.Activity> getSettingActivityClass() {
         return com.android.email.activity.setup.AccountSetupExchange.class;
+    }
+    
+    /**
+     * Get class of sync'er for this Store class.  Because exchange Sync rules are so different
+     * than IMAP or POP3, it's likely that an Exchange implementation will need its own sync
+     * controller.  If so, this function must return a non-null value.
+     * 
+     * @return Message Sync controller, or null to use default
+     */
+    @Override
+    public StoreSynchronizer getMessageSynchronizer() {
+        return null;
+    }
+    
+    /**
+     * Inform MessagingController that this store requires message structures to be prefetched
+     * before it can fetch message bodies (this is due to EAS protocol restrictions.)
+     * @return always true for EAS
+     */
+    @Override
+    public boolean requireStructurePrefetch() {
+        return true;
+    }
+    
+    /**
+     * Inform MessagingController that messages sent via EAS will be placed in the Sent folder
+     * automatically (server-side) and don't need to be uploaded.
+     * @return always false for EAS (assuming server-side copy is supported)
+     */
+    @Override
+    public boolean requireCopyMessageToSentFolder() {
+        return false;
     }
 }
 

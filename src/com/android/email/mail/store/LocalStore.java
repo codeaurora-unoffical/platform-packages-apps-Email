@@ -30,6 +30,7 @@ import com.android.email.mail.MessagingException;
 import com.android.email.mail.Part;
 import com.android.email.mail.Store;
 import com.android.email.mail.Message.RecipientType;
+import com.android.email.mail.Store.PersistentDataCallbacks;
 import com.android.email.mail.internet.MimeBodyPart;
 import com.android.email.mail.internet.MimeHeader;
 import com.android.email.mail.internet.MimeMessage;
@@ -40,7 +41,6 @@ import com.android.email.provider.AttachmentProvider;
 
 import org.apache.commons.io.IOUtils;
 
-import android.app.Application;
 import android.content.ContentValues;
 import android.content.Context;
 import android.database.Cursor;
@@ -68,7 +68,7 @@ import java.util.UUID;
  * Implements a SQLite database backed local store for Messages.
  * </pre>
  */
-public class LocalStore extends Store {
+public class LocalStore extends Store implements PersistentDataCallbacks {
     /**
      * History of database revisions.
      * 
@@ -78,9 +78,13 @@ public class LocalStore extends Store {
      *      18      1.0, 1.1    1.0 Release version.
      *      19      -           Added message_id column to messages table.
      *      20      1.5         Added content_id column to attachments table.
+     *      21      -           Added remote_store_data table
+     *      22      -           Added store_flag_1 and store_flag_2 columns to messages table.
+     *      23      -           Added flag_downloaded_full, flag_downloaded_partial, flag_deleted
+     *                          columns to message table.
      */
     
-    private static final int DB_VERSION = 20;
+    private static final int DB_VERSION = 23;
     
     private static final Flag[] PERMANENT_FLAGS = { Flag.DELETED, Flag.X_DESTROYED, Flag.SEEN };
 
@@ -88,11 +92,13 @@ public class LocalStore extends Store {
     private SQLiteDatabase mDb;
     private File mAttachmentsDir;
     private Context mContext;
+    private int mVisibleLimitDefault = -1;
 
     /**
      * Static named constructor.
      */
-    public static Store newInstance(String uri, Context context) throws MessagingException {
+    public static Store newInstance(String uri, Context context, PersistentDataCallbacks callbacks)
+            throws MessagingException {
         return new LocalStore(uri, context);
     }
 
@@ -140,7 +146,9 @@ public class LocalStore extends Store {
                         "uid TEXT, subject TEXT, date INTEGER, flags TEXT, sender_list TEXT, " +
                         "to_list TEXT, cc_list TEXT, bcc_list TEXT, reply_to_list TEXT, " +
                         "html_content TEXT, text_content TEXT, attachment_count INTEGER, " +
-                        "internal_date INTEGER, message_id TEXT)");
+                        "internal_date INTEGER, message_id TEXT, store_flag_1 INTEGER, " +
+                        "store_flag_2 INTEGER, flag_downloaded_full INTEGER," +
+                        "flag_downloaded_partial INTEGER, flag_deleted INTEGER)");
 
                 mDb.execSQL("DROP TABLE IF EXISTS attachments");
                 mDb.execSQL("CREATE TABLE attachments (id INTEGER PRIMARY KEY, message_id INTEGER,"
@@ -150,9 +158,10 @@ public class LocalStore extends Store {
                 mDb.execSQL("DROP TABLE IF EXISTS pending_commands");
                 mDb.execSQL("CREATE TABLE pending_commands " +
                         "(id INTEGER PRIMARY KEY, command TEXT, arguments TEXT)");
+                
+                addRemoteStoreDataTable();
 
-                mDb.execSQL("DROP TRIGGER IF EXISTS delete_folder");
-                mDb.execSQL("CREATE TRIGGER delete_folder BEFORE DELETE ON folders BEGIN DELETE FROM messages WHERE old.id = folder_id; END;");
+                addFolderDeleteTrigger();
 
                 mDb.execSQL("DROP TRIGGER IF EXISTS delete_message");
                 mDb.execSQL("CREATE TRIGGER delete_message BEFORE DELETE ON messages BEGIN DELETE FROM attachments WHERE old.id = message_id; END;");
@@ -173,6 +182,42 @@ public class LocalStore extends Store {
                     mDb.execSQL("ALTER TABLE attachments ADD COLUMN content_id TEXT;");
                     mDb.setVersion(20);
                 }
+                if (oldVersion < 21) {
+                    /**
+                     * Upgrade 20 to 21:  add remote_store_data and update triggers to match
+                     */
+                    addRemoteStoreDataTable();
+                    addFolderDeleteTrigger();
+                    mDb.setVersion(21);
+                }
+                if (oldVersion < 22) {
+                    /**
+                     * Upgrade 21 to 22:  add store_flag_1 and store_flag_2 to messages table
+                     */
+                    mDb.execSQL("ALTER TABLE messages ADD COLUMN store_flag_1 INTEGER;");
+                    mDb.execSQL("ALTER TABLE messages ADD COLUMN store_flag_2 INTEGER;");
+                    mDb.setVersion(22);
+                }
+                if (oldVersion < 23) {
+                    /**
+                     * Upgrade 22 to 23:  add flag_downloaded_full & flag_downloaded_partial
+                     * and flag_deleted columns to message table *and upgrade existing messages*.
+                     */
+                    mDb.beginTransaction();
+                    try {
+                        mDb.execSQL(
+                                "ALTER TABLE messages ADD COLUMN flag_downloaded_full INTEGER;");
+                        mDb.execSQL(
+                                "ALTER TABLE messages ADD COLUMN flag_downloaded_partial INTEGER;");
+                        mDb.execSQL(
+                                "ALTER TABLE messages ADD COLUMN flag_deleted INTEGER;");
+                        migrateMessageFlags();
+                        mDb.setVersion(23);
+                        mDb.setTransactionSuccessful();
+                    } finally {
+                        mDb.endTransaction();
+                    }
+                }
             }
 
             if (mDb.getVersion() != DB_VERSION) {
@@ -182,6 +227,76 @@ public class LocalStore extends Store {
         mAttachmentsDir = new File(mPath + "_att");
         if (!mAttachmentsDir.exists()) {
             mAttachmentsDir.mkdirs();
+        }
+    }
+    
+    /**
+     * Common code to add the remote_store_data table
+     */
+    private void addRemoteStoreDataTable() {
+        mDb.execSQL("DROP TABLE IF EXISTS remote_store_data");
+        mDb.execSQL("CREATE TABLE remote_store_data (" +
+        		"id INTEGER PRIMARY KEY, folder_id INTEGER, data_key TEXT, data TEXT, " +
+                "UNIQUE (folder_id, data_key) ON CONFLICT REPLACE" +
+                ")");
+    }
+    
+    /**
+     * Common code to add folder delete trigger
+     */
+    private void addFolderDeleteTrigger() {
+        mDb.execSQL("DROP TRIGGER IF EXISTS delete_folder");
+        mDb.execSQL("CREATE TRIGGER delete_folder "
+                + "BEFORE DELETE ON folders "
+                + "BEGIN "
+                    + "DELETE FROM messages WHERE old.id = folder_id; " 
+                    + "DELETE FROM remote_store_data WHERE old.id = folder_id; " 
+                + "END;");
+    }
+    
+    /**
+     * When upgrading from 22 to 23, we have to move any flags "X_DOWNLOADED_FULL" or
+     * "X_DOWNLOADED_PARTIAL" or "DELETED" from the old string-based storage to their own columns.
+     * 
+     * Note:  Caller should open a db transaction around this
+     */
+    private void migrateMessageFlags() {
+        Cursor cursor = mDb.query("messages", 
+                new String[] { "id", "flags" },
+                null, null, null, null, null);
+        try {
+            int columnId = cursor.getColumnIndexOrThrow("id");
+            int columnFlags = cursor.getColumnIndexOrThrow("flags");
+
+            while (cursor.moveToNext()) {
+                String oldFlags = cursor.getString(columnFlags);
+                ContentValues values = new ContentValues();
+                int newFlagDlFull = 0;
+                int newFlagDlPartial = 0;
+                int newFlagDeleted = 0;
+                if (oldFlags != null) {
+                    if (oldFlags.contains(Flag.X_DOWNLOADED_FULL.toString())) {
+                        newFlagDlFull = 1;
+                    }
+                    if (oldFlags.contains(Flag.X_DOWNLOADED_PARTIAL.toString())) {
+                        newFlagDlPartial = 1;
+                    }
+                    if (oldFlags.contains(Flag.DELETED.toString())) {
+                        newFlagDeleted = 1;
+                    }
+                }
+                // Always commit the new flags.
+                // Note:  We don't have to pay the cost of rewriting the old string,
+                // because the old flag will be ignored, and will eventually be overwritten
+                // anyway.
+                values.put("flag_downloaded_full", newFlagDlFull);
+                values.put("flag_downloaded_partial", newFlagDlPartial);
+                values.put("flag_deleted", newFlagDeleted);
+                int rowId = cursor.getInt(columnId);
+                mDb.update("messages", values, "id=" + rowId, null);
+            }
+        } finally {
+            cursor.close();
         }
     }
 
@@ -294,9 +409,15 @@ public class LocalStore extends Store {
         }
     }
 
-    public void resetVisibleLimits() {
+    /**
+     * Set the visible limit for all folders in a given store.
+     * 
+     * @param visibleLimit the value to write to all folders.  -1 may also be used as a marker.
+     */
+    public void resetVisibleLimits(int visibleLimit) {
+        mVisibleLimitDefault = visibleLimit;            // used for future Folder.create ops
         ContentValues cv = new ContentValues();
-        cv.put("visible_limit", Integer.toString(Email.DEFAULT_VISIBLE_LIMIT));
+        cv.put("visible_limit", Integer.toString(visibleLimit));
         mDb.update("folders", cv, null, null);
     }
 
@@ -368,8 +489,68 @@ public class LocalStore extends Store {
             return sb.toString();
         }
     }
+    
+    /**
+     * LocalStore-only function to get the callbacks API
+     */
+    public PersistentDataCallbacks getPersistentCallbacks() throws MessagingException {
+        return this;
+    }
 
-    public class LocalFolder extends Folder {
+    public String getPersistentString(String key, String defaultValue) {
+        return getPersistentString(-1, key, defaultValue);
+    }
+
+    public void setPersistentString(String key, String value) {
+        setPersistentString(-1, key, value);
+    }
+    
+    /**
+     * Common implementation of getPersistentString
+     * @param folderId The id of the associated folder, or -1 for "store" values
+     * @param key The key
+     * @param defaultValue The value to return if the row is not found
+     * @return The row data or the default
+     */
+    private String getPersistentString(long folderId, String key, String defaultValue) {
+        String result = defaultValue;
+        Cursor cursor = null;
+        try {
+            cursor = mDb.query("remote_store_data",
+                    new String[] { "data" },
+                    "folder_id = ? AND data_key = ?",
+                    new String[] { Long.toString(folderId), key },
+                    null,
+                    null,
+                    null);
+            if (cursor != null && cursor.moveToNext()) {
+                result = cursor.getString(0);
+            }
+        }
+        finally {
+            if (cursor != null) {
+                cursor.close();
+            }
+        }
+        return result;
+    }
+
+    /**
+     * Common implementation of setPersistentString
+     * @param folderId The id of the associated folder, or -1 for "store" values
+     * @param key The key
+     * @param value The value to store
+     */
+    private void setPersistentString(long folderId, String key, String value) {
+        ContentValues cv = new ContentValues();
+        cv.put("folder_id", Long.toString(folderId));
+        cv.put("data_key", key);
+        cv.put("data", value);
+        // Note:  Table has on-conflict-replace rule
+        mDb.insert("remote_store_data", null, cv);
+    }
+
+    public class LocalFolder extends Folder implements Folder.PersistentDataCallbacks {
         private String mName;
         private long mFolderId = -1;
         private int mUnreadMessageCount = -1;
@@ -382,9 +563,17 @@ public class LocalStore extends Store {
         public long getId() {
             return mFolderId;
         }
+        
+        /**
+         * This is just used by the internal callers
+         */
+        private void open(OpenMode mode) throws MessagingException {
+            open(mode, null);
+        }
 
         @Override
-        public void open(OpenMode mode) throws MessagingException {
+        public void open(OpenMode mode, PersistentDataCallbacks callbacks) 
+                throws MessagingException {
             if (isOpen()) {
                 return;
             }
@@ -398,10 +587,12 @@ public class LocalStore extends Store {
                     new String[] {
                         mName
                     });
-            cursor.moveToFirst();
-            mFolderId = cursor.getInt(0);
-            mUnreadMessageCount = cursor.getInt(1);
-            mVisibleLimit = cursor.getInt(2);
+                if (!cursor.moveToFirst()) {
+                    throw new MessagingException("Nonexistent folder");
+                }
+                mFolderId = cursor.getInt(0);
+                mUnreadMessageCount = cursor.getInt(1);
+                mVisibleLimit = cursor.getInt(2);
             }
             finally {
                 if (cursor != null) {
@@ -437,7 +628,7 @@ public class LocalStore extends Store {
             }
             mDb.execSQL("INSERT INTO folders (name, visible_limit) VALUES (?, ?)", new Object[] {
                 mName,
-                25
+                mVisibleLimitDefault
             });
             return true;
         }
@@ -472,10 +663,27 @@ public class LocalStore extends Store {
 
         @Override
         public int getUnreadMessageCount() throws MessagingException {
-            open(OpenMode.READ_WRITE);
+            if (!isOpen()) {
+                // opening it will read all columns including mUnreadMessageCount
+                open(OpenMode.READ_WRITE);
+            } else {
+                // already open.  refresh from db in case another instance wrote to it
+                Cursor cursor = null;
+                try {
+                    cursor = mDb.rawQuery("SELECT unread_count FROM folders WHERE folders.name = ?",
+                            new String[] { mName });
+                    if (!cursor.moveToFirst()) {
+                        throw new MessagingException("Nonexistent folder");
+                    }
+                    mUnreadMessageCount = cursor.getInt(0);
+                } finally {
+                    if (cursor != null) {
+                        cursor.close();
+                    }
+                }
+            }
             return mUnreadMessageCount;
         }
-
 
         public void setUnreadMessageCount(int unreadMessageCount) throws MessagingException {
             open(OpenMode.READ_WRITE);
@@ -485,10 +693,28 @@ public class LocalStore extends Store {
         }
 
         public int getVisibleLimit() throws MessagingException {
-            open(OpenMode.READ_WRITE);
+            if (!isOpen()) {
+                // opening it will read all columns including mVisibleLimit
+                open(OpenMode.READ_WRITE);
+            } else {
+                // already open.  refresh from db in case another instance wrote to it
+                Cursor cursor = null;
+                try {
+                    cursor = mDb.rawQuery(
+                            "SELECT visible_limit FROM folders WHERE folders.name = ?",
+                            new String[] { mName });
+                    if (!cursor.moveToFirst()) {
+                        throw new MessagingException("Nonexistent folder");
+                    }
+                    mVisibleLimit = cursor.getInt(0);
+                } finally {
+                    if (cursor != null) {
+                        cursor.close();
+                    }
+                }
+            }
             return mVisibleLimit;
         }
-
 
         public void setVisibleLimit(int visibleLimit) throws MessagingException {
             open(OpenMode.READ_WRITE);
@@ -497,12 +723,14 @@ public class LocalStore extends Store {
                     new Object[] { mVisibleLimit, mFolderId });
         }
 
-
+        /**
+         * Supports FetchProfile.Item.BODY and FetchProfile.Item.STRUCTURE
+         */
         @Override
         public void fetch(Message[] messages, FetchProfile fp, MessageRetrievalListener listener)
                 throws MessagingException {
             open(OpenMode.READ_WRITE);
-            if (fp.contains(FetchProfile.Item.BODY)) {
+            if (fp.contains(FetchProfile.Item.BODY) || fp.contains(FetchProfile.Item.STRUCTURE)) {
                 for (Message message : messages) {
                     LocalMessage localMessage = (LocalMessage)message;
                     Cursor cursor = null;
@@ -510,30 +738,45 @@ public class LocalStore extends Store {
                     MimeMultipart mp = new MimeMultipart();
                     mp.setSubType("mixed");
                     localMessage.setBody(mp);
-                    try {
-                        cursor = mDb.rawQuery("SELECT html_content, text_content FROM messages "
-                                + "WHERE id = ?",
-                                new String[] { Long.toString(localMessage.mId) });
-                        cursor.moveToNext();
-                        String htmlContent = cursor.getString(0);
-                        String textContent = cursor.getString(1);
+                    
+                    // If fetching the body, retrieve html & plaintext from DB.
+                    // If fetching structure, simply build placeholders for them.
+                    if (fp.contains(FetchProfile.Item.BODY)) {
+                        try {
+                            cursor = mDb.rawQuery("SELECT html_content, text_content FROM messages "
+                                    + "WHERE id = ?",
+                                    new String[] { Long.toString(localMessage.mId) });
+                            cursor.moveToNext();
+                            String htmlContent = cursor.getString(0);
+                            String textContent = cursor.getString(1);
 
-                        if (htmlContent != null) {
-                            TextBody body = new TextBody(htmlContent);
-                            MimeBodyPart bp = new MimeBodyPart(body, "text/html");
-                            mp.addBodyPart(bp);
-                        }
+                            if (htmlContent != null) {
+                                TextBody body = new TextBody(htmlContent);
+                                MimeBodyPart bp = new MimeBodyPart(body, "text/html");
+                                mp.addBodyPart(bp);
+                            }
 
-                        if (textContent != null) {
-                            TextBody body = new TextBody(textContent);
-                            MimeBodyPart bp = new MimeBodyPart(body, "text/plain");
-                            mp.addBodyPart(bp);
+                            if (textContent != null) {
+                                TextBody body = new TextBody(textContent);
+                                MimeBodyPart bp = new MimeBodyPart(body, "text/plain");
+                                mp.addBodyPart(bp);
+                            }
                         }
-                    }
-                    finally {
-                        if (cursor != null) {
-                            cursor.close();
+                        finally {
+                            if (cursor != null) {
+                                cursor.close();
+                            }
                         }
+                    } else {
+                        MimeBodyPart bp = new MimeBodyPart();
+                        bp.setHeader(MimeHeader.HEADER_CONTENT_TYPE,
+                                "text/html;\n charset=\"UTF-8\"");
+                        mp.addBodyPart(bp);
+
+                        bp = new MimeBodyPart();
+                        bp.setHeader(MimeHeader.HEADER_CONTENT_TYPE,
+                                "text/plain;\n charset=\"UTF-8\"");
+                        mp.addBodyPart(bp);
                     }
 
                     try {
@@ -596,13 +839,22 @@ public class LocalStore extends Store {
         }
 
         /**
-         * Populate a message from a cursor with the following colummns:
+         * The columns to select when calling populateMessageFromGetMessageCursor()
+         */
+        private final String POPULATE_MESSAGE_SELECT_COLUMNS = 
+            "subject, sender_list, date, uid, flags, id, to_list, cc_list, " +
+            "bcc_list, reply_to_list, attachment_count, internal_date, message_id, " +
+            "store_flag_1, store_flag_2, flag_downloaded_full, flag_downloaded_partial, " +
+            "flag_deleted";
+
+        /**
+         * Populate a message from a cursor with the following columns:
          * 
          * 0    subject
          * 1    from address
          * 2    date (long)
          * 3    uid
-         * 4    flag list
+         * 4    flag list (older flags - comma-separated string)
          * 5    local id (long)
          * 6    to addresses
          * 7    cc addresses
@@ -611,6 +863,11 @@ public class LocalStore extends Store {
          * 10   attachment count (int)
          * 11   internal date (long)
          * 12   message id (from Mime headers)
+         * 13   store flag 1
+         * 14   store flag 2
+         * 15   flag "downloaded full"
+         * 16   flag "downloaded partial"
+         * 17   flag "deleted"
          */
         private void populateMessageFromGetMessageCursor(LocalMessage message, Cursor cursor)
                 throws MessagingException{
@@ -639,6 +896,11 @@ public class LocalStore extends Store {
             message.mAttachmentCount = cursor.getInt(10);
             message.setInternalDate(new Date(cursor.getLong(11)));
             message.setMessageId(cursor.getString(12));
+            message.setFlagInternal(Flag.X_STORE_1, (0 != cursor.getInt(13)));
+            message.setFlagInternal(Flag.X_STORE_2, (0 != cursor.getInt(14)));
+            message.setFlagInternal(Flag.X_DOWNLOADED_FULL, (0 != cursor.getInt(15)));
+            message.setFlagInternal(Flag.X_DOWNLOADED_PARTIAL, (0 != cursor.getInt(16)));
+            message.setFlagInternal(Flag.DELETED, (0 != cursor.getInt(17)));
         }
 
         @Override
@@ -656,9 +918,9 @@ public class LocalStore extends Store {
             Cursor cursor = null;
             try {
                 cursor = mDb.rawQuery(
-                        "SELECT subject, sender_list, date, uid, flags, id, to_list, cc_list, "
-                        + "bcc_list, reply_to_list, attachment_count, internal_date, message_id "
-                                + "FROM messages " + "WHERE uid = ? " + "AND folder_id = ?",
+                        "SELECT " + POPULATE_MESSAGE_SELECT_COLUMNS +
+                        " FROM messages" + 
+                        " WHERE uid = ? AND folder_id = ?",
                         new String[] {
                                 message.getUid(), Long.toString(mFolderId)
                         });
@@ -682,10 +944,11 @@ public class LocalStore extends Store {
             Cursor cursor = null;
             try {
                 cursor = mDb.rawQuery(
-                        "SELECT subject, sender_list, date, uid, flags, id, to_list, cc_list, "
-                        + "bcc_list, reply_to_list, attachment_count, internal_date, message_id "
-                                + "FROM messages " + "WHERE folder_id = ?", new String[] {
-                            Long.toString(mFolderId)
+                        "SELECT " + POPULATE_MESSAGE_SELECT_COLUMNS +
+                        " FROM messages" +
+                        " WHERE folder_id = ?", 
+                        new String[] {
+                                Long.toString(mFolderId)
                         });
 
                 while (cursor.moveToNext()) {
@@ -716,9 +979,89 @@ public class LocalStore extends Store {
             }
             return messages.toArray(new Message[] {});
         }
+        
+        /**
+         * Return a set of messages based on the state of the flags.
+         * 
+         * @param setFlags The flags that should be set for a message to be selected (null ok)
+         * @param clearFlags The flags that should be clear for a message to be selected (null ok)
+         * @param listener
+         * @return A list of messages matching the desired flag states.
+         * @throws MessagingException
+         */
+        @Override
+        public Message[] getMessages(Flag[] setFlags, Flag[] clearFlags, 
+                MessageRetrievalListener listener) throws MessagingException {
+            // Generate WHERE clause based on flags observed
+            StringBuilder sql = new StringBuilder(
+                    "SELECT " + POPULATE_MESSAGE_SELECT_COLUMNS +
+                    " FROM messages" +
+                    " WHERE ");
+            if (setFlags != null) {
+                for (Flag flag : setFlags) {
+                    if (flag == Flag.X_STORE_1) {
+                        sql.append("store_flag_1 = 1 AND ");
+                    } else if (flag == Flag.X_STORE_2) {
+                        sql.append("store_flag_2 = 1 AND ");
+                    } else if (flag == Flag.X_DOWNLOADED_FULL) {
+                        sql.append("flag_downloaded_full = 1 AND ");
+                    } else if (flag == Flag.X_DOWNLOADED_PARTIAL) {
+                        sql.append("flag_downloaded_partial = 1 AND ");
+                    } else if (flag == Flag.DELETED) {
+                        sql.append("flag_deleted = 1 AND ");
+                    } else {
+                        throw new MessagingException("Unsupported flag " + flag);
+                    }
+                }
+            }
+            if (clearFlags != null) {
+                for (Flag flag : clearFlags) {
+                    if (flag == Flag.X_STORE_1) {
+                        sql.append("store_flag_1 = 0 AND ");
+                    } else if (flag == Flag.X_STORE_2) {
+                        sql.append("store_flag_2 = 0 AND ");
+                    } else if (flag == Flag.X_DOWNLOADED_FULL) {
+                        sql.append("flag_downloaded_full = 0 AND ");
+                    } else if (flag == Flag.X_DOWNLOADED_PARTIAL) {
+                        sql.append("flag_downloaded_partial = 0 AND ");
+                    } else if (flag == Flag.DELETED) {
+                        sql.append("flag_deleted = 0 AND ");
+                    } else {
+                        throw new MessagingException("Unsupported flag " + flag);
+                    }
+                }
+            }
+            sql.append("folder_id = ?");
+            
+            open(OpenMode.READ_WRITE);
+            ArrayList<Message> messages = new ArrayList<Message>();
+            
+            Cursor cursor = null;
+            try {
+                cursor = mDb.rawQuery(
+                        sql.toString(),
+                        new String[] {
+                                Long.toString(mFolderId)
+                        });
+
+                while (cursor.moveToNext()) {
+                    LocalMessage message = new LocalMessage(null, this);
+                    populateMessageFromGetMessageCursor(message, cursor);
+                    messages.add(message);
+                }
+            }
+            finally {
+                if (cursor != null) {
+                    cursor.close();
+                }
+            }
+
+            return messages.toArray(new Message[] {});
+        }
 
         @Override
-        public void copyMessages(Message[] msgs, Folder folder) throws MessagingException {
+        public void copyMessages(Message[] msgs, Folder folder, MessageUpdateCallbacks callbacks)
+                throws MessagingException {
             if (!(folder instanceof LocalFolder)) {
                 throw new MessagingException("copyMessages called with incorrect Folder");
             }
@@ -793,7 +1136,7 @@ public class LocalStore extends Store {
                     cv.put("sender_list", Address.pack(message.getFrom()));
                     cv.put("date", message.getSentDate() == null
                             ? System.currentTimeMillis() : message.getSentDate().getTime());
-                    cv.put("flags", Utility.combine(message.getFlags(), ',').toUpperCase());
+                    cv.put("flags", makeFlagsString(message));
                     cv.put("folder_id", mFolderId);
                     cv.put("to_list", Address.pack(message.getRecipients(RecipientType.TO)));
                     cv.put("cc_list", Address.pack(message.getRecipients(RecipientType.CC)));
@@ -805,6 +1148,13 @@ public class LocalStore extends Store {
                     cv.put("internal_date",  message.getInternalDate() == null
                             ? System.currentTimeMillis() : message.getInternalDate().getTime());
                     cv.put("message_id", ((MimeMessage)message).getMessageId());
+                    cv.put("store_flag_1", makeFlagNumeric(message, Flag.X_STORE_1));
+                    cv.put("store_flag_2", makeFlagNumeric(message, Flag.X_STORE_2));
+                    cv.put("flag_downloaded_full", 
+                            makeFlagNumeric(message, Flag.X_DOWNLOADED_FULL));
+                    cv.put("flag_downloaded_partial", 
+                            makeFlagNumeric(message, Flag.X_DOWNLOADED_PARTIAL));
+                    cv.put("flag_deleted", makeFlagNumeric(message, Flag.DELETED));
                     long messageId = mDb.insert("messages", "uid", cv);
                     for (Part attachment : attachments) {
                         saveAttachment(messageId, attachment, copy);
@@ -857,7 +1207,10 @@ public class LocalStore extends Store {
                         + "uid = ?, subject = ?, sender_list = ?, date = ?, flags = ?, "
                         + "folder_id = ?, to_list = ?, cc_list = ?, bcc_list = ?, "
                         + "html_content = ?, text_content = ?, reply_to_list = ?, "
-                        + "attachment_count = ?, message_id = ? WHERE id = ?",
+                        + "attachment_count = ?, message_id = ?, store_flag_1 = ?, "
+                        + "store_flag_2 = ?, flag_downloaded_full = ?, "
+                        + "flag_downloaded_partial = ?, flag_deleted = ? "
+                        + "WHERE id = ?",
                         new Object[] {
                                 message.getUid(),
                                 message.getSubject(),
@@ -865,7 +1218,7 @@ public class LocalStore extends Store {
                                 message.getSentDate() == null ? System
                                         .currentTimeMillis() : message.getSentDate()
                                         .getTime(),
-                                Utility.combine(message.getFlags(), ',').toUpperCase(),
+                                makeFlagsString(message),
                                 mFolderId,
                                 Address.pack(message
                                         .getRecipients(RecipientType.TO)),
@@ -878,6 +1231,12 @@ public class LocalStore extends Store {
                                 Address.pack(message.getReplyTo()),
                                 attachments.size(),
                                 message.getMessageId(),
+                                makeFlagNumeric(message, Flag.X_STORE_1),
+                                makeFlagNumeric(message, Flag.X_STORE_2),
+                                makeFlagNumeric(message, Flag.X_DOWNLOADED_FULL),
+                                makeFlagNumeric(message, Flag.X_DOWNLOADED_PARTIAL),
+                                makeFlagNumeric(message, Flag.DELETED),
+                                
                                 message.mId
                                 });
 
@@ -1104,6 +1463,86 @@ public class LocalStore extends Store {
                 }
             }
         }
+        
+        /**
+         * Support for local persistence for our remote stores.
+         * Will open the folder if necessary.
+         */
+        public Folder.PersistentDataCallbacks getPersistentCallbacks() throws MessagingException {
+            open(OpenMode.READ_WRITE);
+            return this;
+        }
+
+        public String getPersistentString(String key, String defaultValue) {
+            return LocalStore.this.getPersistentString(mFolderId, key, defaultValue);
+        }
+
+        public void setPersistentString(String key, String value) {
+            LocalStore.this.setPersistentString(mFolderId, key, value);
+        }
+
+        /**
+         * Transactionally combine a key/value and a complete message flags flip.  Used 
+         * for setting sync bits in messages.
+         * 
+         * Note:  Not all flags are supported here and can only be changed with Message.setFlag().
+         * For example, Flag.DELETED has side effects (removes attachments).
+         * 
+         * @param key
+         * @param value
+         * @param setFlags
+         * @param clearFlags
+         */
+        public void setPersistentStringAndMessageFlags(String key, String value,
+                Flag[] setFlags, Flag[] clearFlags) throws MessagingException {
+            mDb.beginTransaction();
+            try {
+                // take care of folder persistence
+                if (key != null) {
+                    setPersistentString(key, value);
+                }
+                
+                // take care of flags
+                ContentValues cv = new ContentValues();
+                if (setFlags != null) {
+                    for (Flag flag : setFlags) {
+                        if (flag == Flag.X_STORE_1) {
+                            cv.put("store_flag_1", 1);
+                        } else if (flag == Flag.X_STORE_2) {
+                            cv.put("store_flag_2", 1);
+                        } else if (flag == Flag.X_DOWNLOADED_FULL) {
+                            cv.put("flag_downloaded_full", 1);
+                        } else if (flag == Flag.X_DOWNLOADED_PARTIAL) {
+                            cv.put("flag_downloaded_partial", 1);
+                        } else {
+                            throw new MessagingException("Unsupported flag " + flag);
+                        }
+                    }
+                }
+                if (clearFlags != null) {
+                    for (Flag flag : clearFlags) {
+                        if (flag == Flag.X_STORE_1) {
+                            cv.put("store_flag_1", 0);
+                        } else if (flag == Flag.X_STORE_2) {
+                            cv.put("store_flag_2", 0);
+                        } else if (flag == Flag.X_DOWNLOADED_FULL) {
+                            cv.put("flag_downloaded_full", 0);
+                        } else if (flag == Flag.X_DOWNLOADED_PARTIAL) {
+                            cv.put("flag_downloaded_partial", 0);
+                        } else {
+                            throw new MessagingException("Unsupported flag " + flag);
+                        }
+                    }
+                }
+                mDb.update("messages", cv, 
+                        "folder_id = ?", new String[] { Long.toString(mFolderId) });
+                
+                mDb.setTransactionSuccessful();
+            } finally {
+                mDb.endTransaction();
+            }
+            
+        }
     }
 
     public class LocalMessage extends MimeMessage {
@@ -1198,11 +1637,59 @@ public class LocalStore extends Store {
             /*
              * Set the flags on the message.
              */
-            mDb.execSQL("UPDATE messages " + "SET flags = ? " + "WHERE id = ?", new Object[] {
-                    Utility.combine(getFlags(), ',').toUpperCase(), mId
+            mDb.execSQL("UPDATE messages "
+                    + "SET flags = ?, store_flag_1 = ?, store_flag_2 = ?, "
+                    + "flag_downloaded_full = ?, flag_downloaded_partial = ?, flag_deleted = ? "
+                    + "WHERE id = ?",
+                    new Object[] {
+                            makeFlagsString(this),
+                            makeFlagNumeric(this, Flag.X_STORE_1),
+                            makeFlagNumeric(this, Flag.X_STORE_2),
+                            makeFlagNumeric(this, Flag.X_DOWNLOADED_FULL),
+                            makeFlagNumeric(this, Flag.X_DOWNLOADED_PARTIAL),
+                            makeFlagNumeric(this, Flag.DELETED),
+                            mId
             });
         }
     }
+
+    /**
+     * Convert *old* flags to flags string.  Some flags are kept in their own columns
+     * (for selecting) and are not included here.
+     * @param message The message containing the flag(s)
+     * @return a comma-separated list of flags, to write into the "flags" column
+     */
+    /* package */ String makeFlagsString(Message message) {
+        StringBuilder sb = null;
+        boolean nonEmpty = false;
+        for (Flag flag : Flag.values()) {
+            if (flag != Flag.X_STORE_1 && flag != Flag.X_STORE_2 && 
+                    flag != Flag.X_DOWNLOADED_FULL && flag != Flag.X_DOWNLOADED_PARTIAL && 
+                    flag != Flag.DELETED &&
+                    message.isSet(flag)) {
+                if (sb == null) {
+                    sb = new StringBuilder();
+                }
+                if (nonEmpty) {
+                    sb.append(',');
+                }
+                sb.append(flag.toString());
+                nonEmpty = true;
+            }
+        }
+        return (sb == null) ? null : sb.toString();
+    }
+    
+    /**
+     * Convert flags to numeric form (0 or 1) for database storage.
+     * @param message The message containing the flag of interest
+     * @param flag The flag of interest
+     *
+     */
+    /* package */ int makeFlagNumeric(Message message, Flag flag) {
+        return message.isSet(flag) ? 1 : 0;
+    }
+
 
     public class LocalAttachmentBodyPart extends MimeBodyPart {
         private long mAttachmentId = -1;

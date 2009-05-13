@@ -17,8 +17,8 @@
 package com.android.email.activity.setup;
 
 import com.android.email.Account;
+import com.android.email.Preferences;
 import com.android.email.R;
-import com.android.email.mail.MessagingException;
 import com.android.email.mail.Store;
 
 import android.app.Activity;
@@ -109,7 +109,8 @@ public class AccountSetupAccountType extends Activity implements OnClickListener
     
     /**
      * The user has selected an exchange account type.  Try to put together a URI using the entered
-     * email address.  Also set the mail delete policy here, because there is no UI (for exchange).
+     * email address.  Also set the mail delete policy here, because there is no UI (for exchange),
+     * and switch the default sync interval to "push".
      */
     private void onExchange() {
         try {
@@ -125,6 +126,8 @@ public class AccountSetupAccountType extends Activity implements OnClickListener
         }
         // TODO: Confirm correct delete policy for exchange
         mAccount.setDeletePolicy(Account.DELETE_POLICY_ON_DELETE);
+        mAccount.setAutomaticCheckIntervalMinutes(Account.CHECK_INTERVAL_PUSH);
+        mAccount.setSyncWindow(Account.SYNC_WINDOW_1_DAY);
         AccountSetupExchange.actionIncomingSettings(this, mAccount, mMakeDefault);
         finish();
     }
@@ -139,13 +142,36 @@ public class AccountSetupAccountType extends Activity implements OnClickListener
         try {
             URI uri = new URI(mAccount.getStoreUri());
             uri = new URI("eas", uri.getUserInfo(), uri.getHost(), uri.getPort(), null, null, null);
-            Store store = Store.getInstance(uri.toString(), this);
-            return (store != null);
+            Store.StoreInfo storeInfo = Store.StoreInfo.getStoreInfo(uri.toString(), this);
+            return (storeInfo != null && checkAccountInstanceLimit(storeInfo));
         } catch (URISyntaxException e) {
             return false;
-        } catch (MessagingException e) {
-            return false;
         }
+    }
+    
+    /**
+     * If the optional store specifies a limit on the number of accounts, make sure that we
+     * don't violate that limit.
+     * @return true if OK to create another account, false if not OK (limit reached)
+     */
+    /* package */ boolean checkAccountInstanceLimit(Store.StoreInfo storeInfo) {
+        // return immediately if account defines no limit
+        if (storeInfo.mAccountInstanceLimit < 0) {
+            return true;
+        }
+        
+        // count existing accounts
+        int currentAccountsCount = 0;
+        Account[] accounts = Preferences.getPreferences(this).getAccounts();
+        for (Account account : accounts) {
+            String storeUri = account.getStoreUri();
+            if (storeUri != null && storeUri.startsWith(storeInfo.mScheme)) {
+                currentAccountsCount++;
+            }
+        }
+        
+        // return true if we can accept another account
+        return (currentAccountsCount < storeInfo.mAccountInstanceLimit);
     }
 
     public void onClick(View v) {

@@ -85,7 +85,8 @@ public class Pop3Store extends Store {
     /**
      * Static named constructor.
      */
-    public static Store newInstance(String uri, Context context) throws MessagingException {
+    public static Store newInstance(String uri, Context context, PersistentDataCallbacks callbacks)
+            throws MessagingException {
         return new Pop3Store(uri);
     }
 
@@ -178,7 +179,7 @@ public class Pop3Store extends Store {
     public void checkSettings() throws MessagingException {
         Pop3Folder folder = new Pop3Folder("INBOX");
         try {
-            folder.open(OpenMode.READ_WRITE);
+            folder.open(OpenMode.READ_WRITE, null);
             folder.checkSettings();
         } finally {
             folder.close(false);    // false == don't expunge anything
@@ -228,7 +229,8 @@ public class Pop3Store extends Store {
         }
 
         @Override
-        public synchronized void open(OpenMode mode) throws MessagingException {
+        public synchronized void open(OpenMode mode, PersistentDataCallbacks callbacks)
+                throws MessagingException {
             if (mTransport.isOpen()) {
                 return;
             }
@@ -787,7 +789,8 @@ public class Pop3Store extends Store {
         }
 
         @Override
-        public void copyMessages(Message[] msgs, Folder folder) throws MessagingException {
+        public void copyMessages(Message[] msgs, Folder folder, MessageUpdateCallbacks callbacks)
+                throws MessagingException {
             throw new UnsupportedOperationException("copyMessages is not supported in POP3");
         }
 
@@ -854,7 +857,7 @@ public class Pop3Store extends Store {
          */
         private String executeSensitiveCommand(String command, String sensitiveReplacement)
                 throws IOException, MessagingException {
-            open(OpenMode.READ_WRITE);
+            open(OpenMode.READ_WRITE, null);
 
             if (command != null) {
                 mTransport.writeLine(command, sensitiveReplacement);

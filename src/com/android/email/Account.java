@@ -35,8 +35,27 @@ public class Account implements Serializable {
     public static final int DELETE_POLICY_7DAYS = 1;
     public static final int DELETE_POLICY_ON_DELETE = 2;
     
-    private static final long serialVersionUID = 2975156672298625121L;
+    public static final int CHECK_INTERVAL_NEVER = -1;
+    public static final int CHECK_INTERVAL_PUSH = -2;
+    
+    public static final int SYNC_WINDOW_USER = -1;
+    public static final int SYNC_WINDOW_1_DAY = 1;
+    public static final int SYNC_WINDOW_3_DAYS = 2;
+    public static final int SYNC_WINDOW_1_WEEK = 3;
+    public static final int SYNC_WINDOW_2_WEEKS = 4;
+    public static final int SYNC_WINDOW_1_MONTH = 5;
+    public static final int SYNC_WINDOW_ALL = 6;
 
+    /** 
+     * This should never be used for persistance, only for marshalling.
+     * TODO: Remove serializable (VERY SLOW) and replace with Parcelable
+     */
+    private static final long serialVersionUID = 1L;
+    
+    // transient values - do not serialize
+    private transient Preferences mPreferences;
+
+    // serialized values
     String mUuid;
     String mStoreUri;
     String mLocalStoreUri;
@@ -54,6 +73,7 @@ public class Account implements Serializable {
     int mAccountNumber;
     boolean mVibrate;
     String mRingtoneUri;
+    int mSyncWindow;
 
     /**
      * <pre>
@@ -64,6 +84,11 @@ public class Account implements Serializable {
      */
     int mDeletePolicy;
 
+    /**
+     * All new fields should have named keys
+     */
+    private final String KEY_SYNC_WINDOW = ".syncWindow";
+
     public Account(Context context) {
         // TODO Change local store path to something readable / recognizable
         mUuid = UUID.randomUUID().toString();
@@ -73,6 +98,7 @@ public class Account implements Serializable {
         mNotifyNewMail = true;
         mVibrate = false;
         mRingtoneUri = "content://settings/system/notification_sound";
+        mSyncWindow = SYNC_WINDOW_USER;       // IMAP & POP3
     }
 
     Account(Preferences preferences, String uuid) {
@@ -84,48 +110,61 @@ public class Account implements Serializable {
      * Refresh the account from the stored settings.
      */
     public void refresh(Preferences preferences) {
-        mStoreUri = Utility.base64Decode(preferences.mSharedPreferences.getString(mUuid
-                + ".storeUri", null));
-        mLocalStoreUri = preferences.mSharedPreferences.getString(mUuid + ".localStoreUri", null);
+        mPreferences = preferences;
         
-        String senderText = preferences.mSharedPreferences.getString(mUuid + ".senderUri", null);
-        if (senderText == null) {
-            // Preference ".senderUri" was called ".transportUri" in earlier versions, so we'll
-            // do a simple upgrade here when necessary.
-            senderText = preferences.mSharedPreferences.getString(mUuid + ".transportUri", null);
+        /**
+         * Note:  Until we have resolved the potential for synchronization failures in
+         * SharedPreferences, we're going to do a global lock around the read and write
+         * functions.
+         */
+        synchronized (Account.class) {
+
+            mStoreUri = Utility.base64Decode(preferences.mSharedPreferences.getString(mUuid
+                    + ".storeUri", null));
+            mLocalStoreUri = preferences.mSharedPreferences.getString(mUuid + ".localStoreUri", null);
+
+            String senderText = preferences.mSharedPreferences.getString(mUuid + ".senderUri", null);
+            if (senderText == null) {
+                // Preference ".senderUri" was called ".transportUri" in earlier versions, so we'll
+                // do a simple upgrade here when necessary.
+                senderText = preferences.mSharedPreferences.getString(mUuid + ".transportUri", null);
+            }
+            mSenderUri = Utility.base64Decode(senderText);
+
+            mDescription = preferences.mSharedPreferences.getString(mUuid + ".description", null);
+            mName = preferences.mSharedPreferences.getString(mUuid + ".name", mName);
+            mEmail = preferences.mSharedPreferences.getString(mUuid + ".email", mEmail);
+            mAutomaticCheckIntervalMinutes = preferences.mSharedPreferences.getInt(mUuid
+                    + ".automaticCheckIntervalMinutes", -1);
+            mLastAutomaticCheckTime = preferences.mSharedPreferences.getLong(mUuid
+                    + ".lastAutomaticCheckTime", 0);
+            mNotifyNewMail = preferences.mSharedPreferences.getBoolean(mUuid + ".notifyNewMail", 
+                    false);
+
+            // delete policy was incorrectly set on earlier versions, so we'll upgrade it here.
+            // rule:  if IMAP account and policy = 0 ("never"), change policy to 2 ("on delete")
+            mDeletePolicy = preferences.mSharedPreferences.getInt(mUuid + ".deletePolicy", 0);
+            if (mDeletePolicy == DELETE_POLICY_NEVER && 
+                    mStoreUri != null && mStoreUri.toString().startsWith(Store.STORE_SCHEME_IMAP)) {
+                mDeletePolicy = DELETE_POLICY_ON_DELETE;
+            }
+
+            mDraftsFolderName = preferences.mSharedPreferences.getString(mUuid  + ".draftsFolderName", 
+            "Drafts");
+            mSentFolderName = preferences.mSharedPreferences.getString(mUuid  + ".sentFolderName", 
+            "Sent");
+            mTrashFolderName = preferences.mSharedPreferences.getString(mUuid  + ".trashFolderName", 
+            "Trash");
+            mOutboxFolderName = preferences.mSharedPreferences.getString(mUuid  + ".outboxFolderName", 
+            "Outbox");
+            mAccountNumber = preferences.mSharedPreferences.getInt(mUuid + ".accountNumber", 0);
+            mVibrate = preferences.mSharedPreferences.getBoolean(mUuid + ".vibrate", false);
+            mRingtoneUri = preferences.mSharedPreferences.getString(mUuid  + ".ringtone", 
+            "content://settings/system/notification_sound");
+
+            mSyncWindow = preferences.mSharedPreferences.getInt(mUuid + KEY_SYNC_WINDOW, 
+                    SYNC_WINDOW_USER);
         }
-        mSenderUri = Utility.base64Decode(senderText);
-        
-        mDescription = preferences.mSharedPreferences.getString(mUuid + ".description", null);
-        mName = preferences.mSharedPreferences.getString(mUuid + ".name", mName);
-        mEmail = preferences.mSharedPreferences.getString(mUuid + ".email", mEmail);
-        mAutomaticCheckIntervalMinutes = preferences.mSharedPreferences.getInt(mUuid
-                + ".automaticCheckIntervalMinutes", -1);
-        mLastAutomaticCheckTime = preferences.mSharedPreferences.getLong(mUuid
-                + ".lastAutomaticCheckTime", 0);
-        mNotifyNewMail = preferences.mSharedPreferences.getBoolean(mUuid + ".notifyNewMail", 
-                false);
-        
-        // delete policy was incorrectly set on earlier versions, so we'll upgrade it here.
-        // rule:  if IMAP account and policy = 0 ("never"), change policy to 2 ("on delete")
-        mDeletePolicy = preferences.mSharedPreferences.getInt(mUuid + ".deletePolicy", 0);
-        if (mDeletePolicy == DELETE_POLICY_NEVER && 
-                mStoreUri != null && mStoreUri.toString().startsWith(Store.STORE_SCHEME_IMAP)) {
-            mDeletePolicy = DELETE_POLICY_ON_DELETE;
-        }
-        
-        mDraftsFolderName = preferences.mSharedPreferences.getString(mUuid  + ".draftsFolderName", 
-                "Drafts");
-        mSentFolderName = preferences.mSharedPreferences.getString(mUuid  + ".sentFolderName", 
-                "Sent");
-        mTrashFolderName = preferences.mSharedPreferences.getString(mUuid  + ".trashFolderName", 
-                "Trash");
-        mOutboxFolderName = preferences.mSharedPreferences.getString(mUuid  + ".outboxFolderName", 
-                "Outbox");
-        mAccountNumber = preferences.mSharedPreferences.getInt(mUuid + ".accountNumber", 0);
-        mVibrate = preferences.mSharedPreferences.getBoolean(mUuid + ".vibrate", false);
-        mRingtoneUri = preferences.mSharedPreferences.getString(mUuid  + ".ringtone", 
-                "content://settings/system/notification_sound");
     }
 
     public String getUuid() {
@@ -189,104 +228,127 @@ public class Account implements Serializable {
     }
 
     public void delete(Preferences preferences) {
-        String[] uuids = preferences.mSharedPreferences.getString("accountUuids", "").split(",");
-        StringBuffer sb = new StringBuffer();
-        for (int i = 0, length = uuids.length; i < length; i++) {
-            if (!uuids[i].equals(mUuid)) {
-                if (sb.length() > 0) {
-                    sb.append(',');
+        /**
+         * Note:  Until we have resolved the potential for synchronization failures in
+         * SharedPreferences, we're going to do a global lock around the read and write
+         * functions.
+         */
+        synchronized (Account.class) {
+            String[] uuids = preferences.mSharedPreferences.getString("accountUuids", "").split(",");
+            StringBuffer sb = new StringBuffer();
+            for (int i = 0, length = uuids.length; i < length; i++) {
+                if (!uuids[i].equals(mUuid)) {
+                    if (sb.length() > 0) {
+                        sb.append(',');
+                    }
+                    sb.append(uuids[i]);
                 }
-                sb.append(uuids[i]);
             }
-        }
-        String accountUuids = sb.toString();
-        SharedPreferences.Editor editor = preferences.mSharedPreferences.edit();
-        editor.putString("accountUuids", accountUuids);
+            String accountUuids = sb.toString();
+            SharedPreferences.Editor editor = preferences.mSharedPreferences.edit();
+            editor.putString("accountUuids", accountUuids);
 
-        editor.remove(mUuid + ".storeUri");
-        editor.remove(mUuid + ".localStoreUri");
-        editor.remove(mUuid + ".senderUri");
-        editor.remove(mUuid + ".description");
-        editor.remove(mUuid + ".name");
-        editor.remove(mUuid + ".email");
-        editor.remove(mUuid + ".automaticCheckIntervalMinutes");
-        editor.remove(mUuid + ".lastAutomaticCheckTime");
-        editor.remove(mUuid + ".notifyNewMail");
-        editor.remove(mUuid + ".deletePolicy");
-        editor.remove(mUuid + ".draftsFolderName");
-        editor.remove(mUuid + ".sentFolderName");
-        editor.remove(mUuid + ".trashFolderName");
-        editor.remove(mUuid + ".outboxFolderName");
-        editor.remove(mUuid + ".accountNumber");
-        editor.remove(mUuid + ".vibrate");
-        editor.remove(mUuid + ".ringtone");
-        
-        // also delete any deprecated fields
-        editor.remove(mUuid + ".transportUri");
-        
-        editor.commit();
+            editor.remove(mUuid + ".storeUri");
+            editor.remove(mUuid + ".localStoreUri");
+            editor.remove(mUuid + ".senderUri");
+            editor.remove(mUuid + ".description");
+            editor.remove(mUuid + ".name");
+            editor.remove(mUuid + ".email");
+            editor.remove(mUuid + ".automaticCheckIntervalMinutes");
+            editor.remove(mUuid + ".lastAutomaticCheckTime");
+            editor.remove(mUuid + ".notifyNewMail");
+            editor.remove(mUuid + ".deletePolicy");
+            editor.remove(mUuid + ".draftsFolderName");
+            editor.remove(mUuid + ".sentFolderName");
+            editor.remove(mUuid + ".trashFolderName");
+            editor.remove(mUuid + ".outboxFolderName");
+            editor.remove(mUuid + ".accountNumber");
+            editor.remove(mUuid + ".vibrate");
+            editor.remove(mUuid + ".ringtone");
+            editor.remove(mUuid + KEY_SYNC_WINDOW);
+
+            // also delete any deprecated fields
+            editor.remove(mUuid + ".transportUri");
+
+            editor.commit();
+        }
     }
 
     public void save(Preferences preferences) {
-        if (!preferences.mSharedPreferences.getString("accountUuids", "").contains(mUuid)) {
-            /*
-             * When the account is first created we assign it a unique account number. The
-             * account number will be unique to that account for the lifetime of the account.
-             * So, we get all the existing account numbers, sort them ascending, loop through
-             * the list and check if the number is greater than 1 + the previous number. If so
-             * we use the previous number + 1 as the account number. This refills gaps.
-             * mAccountNumber starts as -1 on a newly created account. It must be -1 for this
-             * algorithm to work.
-             * 
-             * I bet there is a much smarter way to do this. Anyone like to suggest it?
-             */
-            Account[] accounts = preferences.getAccounts();
-            int[] accountNumbers = new int[accounts.length];
-            for (int i = 0; i < accounts.length; i++) {
-                accountNumbers[i] = accounts[i].getAccountNumber();
-            }
-            Arrays.sort(accountNumbers);
-            for (int accountNumber : accountNumbers) {
-                if (accountNumber > mAccountNumber + 1) {
-                    break;
+        mPreferences = preferences;
+        
+        /**
+         * Note:  Until we have resolved the potential for synchronization failures in
+         * SharedPreferences, we're going to do a global lock around the read and write
+         * functions.
+         */
+        synchronized (Account.class) {
+            if (!preferences.mSharedPreferences.getString("accountUuids", "").contains(mUuid)) {
+                /*
+                 * When the account is first created we assign it a unique account number. The
+                 * account number will be unique to that account for the lifetime of the account.
+                 * So, we get all the existing account numbers, sort them ascending, loop through
+                 * the list and check if the number is greater than 1 + the previous number. If so
+                 * we use the previous number + 1 as the account number. This refills gaps.
+                 * mAccountNumber starts as -1 on a newly created account. It must be -1 for this
+                 * algorithm to work.
+                 * 
+                 * I bet there is a much smarter way to do this. Anyone like to suggest it?
+                 */
+                Account[] accounts = preferences.getAccounts();
+                int[] accountNumbers = new int[accounts.length];
+                for (int i = 0; i < accounts.length; i++) {
+                    accountNumbers[i] = accounts[i].getAccountNumber();
                 }
-                mAccountNumber = accountNumber;
+                Arrays.sort(accountNumbers);
+                for (int accountNumber : accountNumbers) {
+                    if (accountNumber > mAccountNumber + 1) {
+                        break;
+                    }
+                    mAccountNumber = accountNumber;
+                }
+                mAccountNumber++;
+
+                String accountUuids = preferences.mSharedPreferences.getString("accountUuids", "");
+                accountUuids += (accountUuids.length() != 0 ? "," : "") + mUuid;
+                SharedPreferences.Editor editor = preferences.mSharedPreferences.edit();
+                editor.putString("accountUuids", accountUuids);
+                editor.commit();
             }
-            mAccountNumber++;
-            
-            String accountUuids = preferences.mSharedPreferences.getString("accountUuids", "");
-            accountUuids += (accountUuids.length() != 0 ? "," : "") + mUuid;
+
             SharedPreferences.Editor editor = preferences.mSharedPreferences.edit();
-            editor.putString("accountUuids", accountUuids);
+
+            editor.putString(mUuid + ".storeUri", Utility.base64Encode(mStoreUri));
+            editor.putString(mUuid + ".localStoreUri", mLocalStoreUri);
+            editor.putString(mUuid + ".senderUri", Utility.base64Encode(mSenderUri));
+            editor.putString(mUuid + ".description", mDescription);
+            editor.putString(mUuid + ".name", mName);
+            editor.putString(mUuid + ".email", mEmail);
+            editor.putInt(mUuid + ".automaticCheckIntervalMinutes", mAutomaticCheckIntervalMinutes);
+            editor.putLong(mUuid + ".lastAutomaticCheckTime", mLastAutomaticCheckTime);
+            editor.putBoolean(mUuid + ".notifyNewMail", mNotifyNewMail);
+            editor.putInt(mUuid + ".deletePolicy", mDeletePolicy);
+            editor.putString(mUuid + ".draftsFolderName", mDraftsFolderName);
+            editor.putString(mUuid + ".sentFolderName", mSentFolderName);
+            editor.putString(mUuid + ".trashFolderName", mTrashFolderName);
+            editor.putString(mUuid + ".outboxFolderName", mOutboxFolderName);
+            editor.putInt(mUuid + ".accountNumber", mAccountNumber);
+            editor.putBoolean(mUuid + ".vibrate", mVibrate);
+            editor.putString(mUuid + ".ringtone", mRingtoneUri);
+            editor.putInt(mUuid + KEY_SYNC_WINDOW, mSyncWindow);
+
+            // The following fields are *not* written because they need to be more fine-grained
+            // and not risk rewriting with old data.
+            // editor.putString(mUuid + PREF_TAG_STORE_PERSISTENT, mStorePersistent);
+
+            // also delete any deprecated fields
+            editor.remove(mUuid + ".transportUri");
+
             editor.commit();
         }
-
-        SharedPreferences.Editor editor = preferences.mSharedPreferences.edit();
-
-        editor.putString(mUuid + ".storeUri", Utility.base64Encode(mStoreUri));
-        editor.putString(mUuid + ".localStoreUri", mLocalStoreUri);
-        editor.putString(mUuid + ".senderUri", Utility.base64Encode(mSenderUri));
-        editor.putString(mUuid + ".description", mDescription);
-        editor.putString(mUuid + ".name", mName);
-        editor.putString(mUuid + ".email", mEmail);
-        editor.putInt(mUuid + ".automaticCheckIntervalMinutes", mAutomaticCheckIntervalMinutes);
-        editor.putLong(mUuid + ".lastAutomaticCheckTime", mLastAutomaticCheckTime);
-        editor.putBoolean(mUuid + ".notifyNewMail", mNotifyNewMail);
-        editor.putInt(mUuid + ".deletePolicy", mDeletePolicy);
-        editor.putString(mUuid + ".draftsFolderName", mDraftsFolderName);
-        editor.putString(mUuid + ".sentFolderName", mSentFolderName);
-        editor.putString(mUuid + ".trashFolderName", mTrashFolderName);
-        editor.putString(mUuid + ".outboxFolderName", mOutboxFolderName);
-        editor.putInt(mUuid + ".accountNumber", mAccountNumber);
-        editor.putBoolean(mUuid + ".vibrate", mVibrate);
-        editor.putString(mUuid + ".ringtone", mRingtoneUri);
-        
-        // also delete any deprecated fields
-        editor.remove(mUuid + ".transportUri");
-
-        editor.commit();
     }
 
+    @Override
     public String toString() {
         return mDescription;
     }
@@ -375,6 +437,14 @@ public class Account implements Serializable {
     
     public int getAccountNumber() {
         return mAccountNumber;
+    }
+
+    public int getSyncWindow() {
+        return mSyncWindow;
+    }
+    
+    public void setSyncWindow(int window) {
+        mSyncWindow = window;
     }
 
     @Override

@@ -16,19 +16,18 @@
 
 package com.android.email.mail.store;
 
+import com.android.email.mail.Folder;
 import com.android.email.mail.MessagingException;
 import com.android.email.mail.Transport;
 import com.android.email.mail.Folder.OpenMode;
 import com.android.email.mail.internet.BinaryTempFileBody;
-import com.android.email.mail.store.ImapResponseParser;
 import com.android.email.mail.transport.MockTransport;
-
-import java.util.Date;
-import java.util.Locale;
 
 import android.test.AndroidTestCase;
 import android.test.suitebuilder.annotation.SmallTest;
-import android.util.Log;
+
+import java.util.Date;
+import java.util.Locale;
 
 /**
  * This is a series of unit tests for the ImapStore class.  These tests must be locally
@@ -50,7 +49,7 @@ public class ImapStoreUnitTests extends AndroidTestCase {
         
         // These are needed so we can get at the inner classes
         mStore = (ImapStore) ImapStore.newInstance("imap://user:password@server:999",
-                getContext());
+                getContext(), null);
         mFolder = (ImapStore.ImapFolder) mStore.getFolder("INBOX");
         
         // This is needed for parsing mime messages
@@ -66,7 +65,7 @@ public class ImapStoreUnitTests extends AndroidTestCase {
         
         // try to open it
         setupOpenFolder(mockTransport);
-        mFolder.open(OpenMode.READ_WRITE);
+        mFolder.open(OpenMode.READ_WRITE, null);
         
         // TODO: inject specific facts in the initial folder SELECT and check them here
     }
@@ -117,6 +116,31 @@ public class ImapStoreUnitTests extends AndroidTestCase {
      * TODO: Test small Folder functions that don't really do anything in Imap (if any)
      */   
     
+    /**
+     * Lightweight test to confirm that IMAP hasn't implemented any folder roles yet.
+     * 
+     * TODO: Test this with multiple folders provided by mock server
+     * TODO: Implement XLIST and then support this
+     */
+    public void testNoFolderRolesYet() {
+        assertEquals(Folder.FolderRole.UNKNOWN, mFolder.getRole()); 
+    }
+    
+    /**
+     * Lightweight test to confirm that IMAP isn't requesting structure prefetch.
+     */
+    public void testNoStructurePrefetch() {
+        assertFalse(mStore.requireStructurePrefetch()); 
+    }
+    
+    /**
+     * Lightweight test to confirm that IMAP is requesting sent-message-upload.
+     * TODO: Implement Gmail-specific cases and handle this server-side
+     */
+    public void testSentUploadRequested() {
+        assertTrue(mStore.requireCopyMessageToSentFolder()); 
+    }
+
     /**
      * TODO: Test the process of opening and indexing a mailbox with one unread message in it.
      */
