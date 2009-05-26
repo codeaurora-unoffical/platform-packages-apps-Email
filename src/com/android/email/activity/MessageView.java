@@ -93,8 +93,8 @@ public class MessageView extends Activity
     };
     private static final int METHODS_STATUS_COLUMN = 1;
 
-    // regex that matches start of img tag. '.*<(?i)img\s+.*'.
-    private static final Pattern IMG_TAG_START_REGEX = Pattern.compile(".*<(?i)img\\s+.*");
+    // regex that matches start of img tag. '<(?i)img\s+'.
+    private static final Pattern IMG_TAG_START_REGEX = Pattern.compile("<(?i)img\\s+");
 
     private TextView mSubjectView;
     private TextView mFromView;
@@ -426,8 +426,11 @@ public class MessageView extends Activity
     @Override
     public void onDestroy() {
         super.onDestroy();
-        mMessageContentView.destroy();
-        mMessageContentView = null;
+        // This is synchronized because the listener accesses mMessageContentView from its thread
+        synchronized (this) {
+            mMessageContentView.destroy();
+            mMessageContentView = null;
+        }
     }
 
     private void onDelete() {
@@ -724,8 +727,8 @@ public class MessageView extends Activity
      */
     /* package */ String resolveInlineImage(String text, Part part, int depth)
         throws MessagingException {
-        // avoid too deep recursive call.
-        if (depth >= 10) {
+        // avoid too deep recursive call or null text
+        if (depth >= 10 || text == null) {
             return text;
         }
         String contentType = MimeUtility.unfoldAndDecode(part.getContentType());
@@ -942,20 +945,22 @@ public class MessageView extends Activity
                          * Linkify the plain text and convert it to HTML by replacing
                          * \r?\n with <br> and adding a html/body wrapper.
                          */
-                        Matcher m = Regex.WEB_URL_PATTERN.matcher(text);
-                        StringBuffer sb = new StringBuffer();
-                        while (m.find()) {
-                            int start = m.start();
-                            if (start != 0 && text.charAt(start - 1) != '@') {
-                                m.appendReplacement(sb, "<a href=\"$0\">$0</a>");
+                        StringBuffer sb = new StringBuffer("<html><body>");
+                        if (text != null) {
+                            Matcher m = Regex.WEB_URL_PATTERN.matcher(text);
+                            while (m.find()) {
+                                int start = m.start();
+                                if (start != 0 && text.charAt(start - 1) != '@') {
+                                    m.appendReplacement(sb, "<a href=\"$0\">$0</a>");
+                                }
+                                else {
+                                    m.appendReplacement(sb, "$0");
+                                }
                             }
-                            else {
-                                m.appendReplacement(sb, "$0");
-                            }
+                            m.appendTail(sb);
                         }
-                        m.appendTail(sb);
+                        sb.append("</body></html>");
                         text = sb.toString().replaceAll("\r?\n", "<br>");
-                        text = "<html><body>" + text + "</body></html>";
                     }
 
                     /*
@@ -963,15 +968,14 @@ public class MessageView extends Activity
                      * that HTML allows.
                      */
                     // Check if text contains img tag.
-                    if (IMG_TAG_START_REGEX.matcher(text).matches()) {
+                    if (IMG_TAG_START_REGEX.matcher(text).find()) {
                         mHandler.showShowPictures(true);
                     }
 
-                    mMessageContentView.loadDataWithBaseURL("email://", text, "text/html",
-                            "utf-8", null);
+                    loadMessageContentText(text);
                 }
                 else {
-                    mMessageContentView.loadUrl("file:///android_asset/empty.html");
+                    loadMessageContentUrl("file:///android_asset/empty.html");
                 }
                 renderAttachments(mMessage, 0);
             }
@@ -989,7 +993,7 @@ public class MessageView extends Activity
                 public void run() {
                     setProgressBarIndeterminateVisibility(false);
                     mHandler.networkError();
-                    mMessageContentView.loadUrl("file:///android_asset/empty.html");
+                    loadMessageContentUrl("file:///android_asset/empty.html");
                 }
             });
         }
@@ -1008,7 +1012,7 @@ public class MessageView extends Activity
         public void loadMessageForViewStarted(Account account, String folder, String uid) {
             mHandler.post(new Runnable() {
                 public void run() {
-                    mMessageContentView.loadUrl("file:///android_asset/loading.html");
+                    loadMessageContentUrl("file:///android_asset/loading.html");
                     setProgressBarIndeterminateVisibility(true);
                 }
             });
@@ -1077,6 +1081,33 @@ public class MessageView extends Activity
             mHandler.setAttachmentsEnabled(true);
             mHandler.progress(false);
             mHandler.networkError();
+        }
+        
+        /**
+         * Safely load a URL for mMessageContentView, or drop it if the view is gone
+         * TODO this really should be moved into a handler message, avoiding the need
+         * for this synchronized() section
+         */
+        private void loadMessageContentUrl(String fileName) {
+            synchronized (MessageView.this) {
+                if (mMessageContentView != null) {
+                    mMessageContentView.loadUrl(fileName);
+                }
+            }
+        }
+        
+        /**
+         * Safely load text for mMessageContentView, or drop it if the view is gone
+         * TODO this really should be moved into a handler message, avoiding the need
+         * for this synchronized() section
+         */
+        private void loadMessageContentText(String text) {
+            synchronized (MessageView.this) {
+                if (mMessageContentView != null) {
+                    mMessageContentView.loadDataWithBaseURL("email://", text, "text/html",
+                            "utf-8", null);
+                }
+            }
         }
     }
 

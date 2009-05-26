@@ -32,6 +32,7 @@ import com.android.email.mail.internet.MimeMessage;
 import com.android.email.mail.transport.LoggingInputStream;
 import com.android.email.mail.transport.MailTransport;
 
+import android.content.Context;
 import android.util.Config;
 import android.util.Log;
 
@@ -82,6 +83,14 @@ public class Pop3Store extends Store {
 //    private int mThroughputKbS = Integer.MAX_VALUE;
 
     /**
+     * Static named constructor.
+     */
+    public static Store newInstance(String uri, Context context, PersistentDataCallbacks callbacks)
+            throws MessagingException {
+        return new Pop3Store(uri);
+    }
+
+    /**
      * pop3://user:password@server:port CONNECTION_SECURITY_NONE
      * pop3+tls://user:password@server:port CONNECTION_SECURITY_TLS_OPTIONAL
      * pop3+tls+://user:password@server:port CONNECTION_SECURITY_TLS_REQUIRED
@@ -90,7 +99,7 @@ public class Pop3Store extends Store {
      *
      * @param _uri
      */
-    public Pop3Store(String _uri) throws MessagingException {
+    private Pop3Store(String _uri) throws MessagingException {
         URI uri;
         try {
             uri = new URI(_uri);
@@ -170,7 +179,7 @@ public class Pop3Store extends Store {
     public void checkSettings() throws MessagingException {
         Pop3Folder folder = new Pop3Folder("INBOX");
         try {
-            folder.open(OpenMode.READ_WRITE);
+            folder.open(OpenMode.READ_WRITE, null);
             folder.checkSettings();
         } finally {
             folder.close(false);    // false == don't expunge anything
@@ -220,7 +229,8 @@ public class Pop3Store extends Store {
         }
 
         @Override
-        public synchronized void open(OpenMode mode) throws MessagingException {
+        public synchronized void open(OpenMode mode, PersistentDataCallbacks callbacks)
+                throws MessagingException {
             if (mTransport.isOpen()) {
                 return;
             }
@@ -779,7 +789,8 @@ public class Pop3Store extends Store {
         }
 
         @Override
-        public void copyMessages(Message[] msgs, Folder folder) throws MessagingException {
+        public void copyMessages(Message[] msgs, Folder folder, MessageUpdateCallbacks callbacks)
+                throws MessagingException {
             throw new UnsupportedOperationException("copyMessages is not supported in POP3");
         }
 
@@ -846,7 +857,7 @@ public class Pop3Store extends Store {
          */
         private String executeSensitiveCommand(String command, String sensitiveReplacement)
                 throws IOException, MessagingException {
-            open(OpenMode.READ_WRITE);
+            open(OpenMode.READ_WRITE, null);
 
             if (command != null) {
                 mTransport.writeLine(command, sensitiveReplacement);

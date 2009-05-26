@@ -56,7 +56,8 @@ public class Pop3StoreUnitTests extends AndroidTestCase {
         super.setUp();
         
         // These are needed so we can get at the inner classes
-        mStore = new Pop3Store("pop3://user:password@server:999");
+        mStore = (Pop3Store) Pop3Store.newInstance("pop3://user:password@server:999",
+                getContext(), null);
         mFolder = (Pop3Store.Pop3Folder) mStore.getFolder("INBOX");
         
         // This is needed for parsing mime messages
@@ -128,7 +129,7 @@ public class Pop3StoreUnitTests extends AndroidTestCase {
         
         // try to open it
         setupOpenFolder(mockTransport, 0, null);
-        mFolder.open(OpenMode.READ_ONLY);
+        mFolder.open(OpenMode.READ_ONLY, null);
     }
     
     /**
@@ -240,13 +241,37 @@ public class Pop3StoreUnitTests extends AndroidTestCase {
         
         // copyMessages() is unsupported
         try {
-            mFolder.copyMessages(null, null);
+            mFolder.copyMessages(null, null, null);
             fail("Exception not thrown by copyMessages()");
         } catch (UnsupportedOperationException e) {
             // expected - succeed
         }
     }
     
+    /**
+     * Lightweight test to confirm that POP3 hasn't implemented any folder roles yet.
+     */
+    public void testNoFolderRolesYet() throws MessagingException {
+        Folder[] remoteFolders = mStore.getPersonalNamespaces();
+        for (Folder folder : remoteFolders) {
+            assertEquals(Folder.FolderRole.UNKNOWN, folder.getRole()); 
+        }
+    }
+
+    /**
+     * Lightweight test to confirm that POP3 isn't requesting structure prefetch.
+     */
+    public void testNoStructurePrefetch() {
+        assertFalse(mStore.requireStructurePrefetch()); 
+    }
+    
+    /**
+     * Lightweight test to confirm that POP3 is requesting sent-message-upload.
+     */
+    public void testSentUploadRequested() {
+        assertTrue(mStore.requireCopyMessageToSentFolder()); 
+    }
+
     /**
      * Test the process of opening and indexing a mailbox with one unread message in it.
      * 
@@ -568,7 +593,7 @@ public class Pop3StoreUnitTests extends AndroidTestCase {
     private void openFolderWithMessage(MockTransport mockTransport) throws MessagingException {
         // try to open it
         setupOpenFolder(mockTransport, 1, null);
-        mFolder.open(OpenMode.READ_ONLY);
+        mFolder.open(OpenMode.READ_ONLY, null);
         
         // check message count
         assertEquals(1, mFolder.getMessageCount());
