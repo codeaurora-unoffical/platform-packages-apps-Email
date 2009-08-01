@@ -35,12 +35,13 @@ import com.android.email.mail.internet.BinaryTempFileBody;
 import com.android.email.mail.internet.MimeMessage;
 import com.android.email.mail.internet.MimeUtility;
 import com.android.email.mail.internet.TextBody;
+import com.android.email.mail.store.LocalStore.LocalMessage;
 
 import android.content.ContentValues;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.test.AndroidTestCase;
-import android.test.suitebuilder.annotation.SmallTest;
+import android.test.suitebuilder.annotation.MediumTest;
 
 import java.io.File;
 import java.net.URI;
@@ -52,7 +53,7 @@ import java.util.HashSet;
 /**
  * This is a series of unit tests for the LocalStore class.
  */
-@SmallTest
+@MediumTest
 public class LocalStoreUnitTests extends AndroidTestCase {
     
     private static final String dbName = "com.android.email.mail.store.LocalStoreUnitTests.db";
@@ -64,7 +65,7 @@ public class LocalStoreUnitTests extends AndroidTestCase {
     private static final String MESSAGE_ID = "Test-Message-ID";
     private static final String MESSAGE_ID_2 = "Test-Message-ID-Second";
     
-    private static final int DATABASE_VERSION = 23;
+    private static final int DATABASE_VERSION = 24;
     
     private static final String FOLDER_NAME = "TEST";
     private static final String MISSING_FOLDER_NAME = "TEST-NO-FOLDER";
@@ -99,6 +100,11 @@ public class LocalStoreUnitTests extends AndroidTestCase {
      */
     @Override
     protected void tearDown() throws Exception {
+        super.tearDown();
+        if (mFolder != null) {
+            mFolder.close(false);
+        }
+        
         // First, try the official way
         if (mStore != null) {
             mStore.delete();
@@ -684,6 +690,70 @@ public class LocalStoreUnitTests extends AndroidTestCase {
     }
     
     /**
+     * Test for getMessageCount
+     */
+    public void testMessageCount() throws MessagingException {
+        
+        final MimeMessage message1 = buildTestMessage(RECIPIENT_TO, SENDER, SUBJECT, BODY);
+        message1.setFlag(Flag.X_STORE_1, false);
+        message1.setFlag(Flag.X_STORE_2, false);
+        message1.setFlag(Flag.X_DOWNLOADED_FULL, true);
+
+        final MimeMessage message2 = buildTestMessage(RECIPIENT_TO, SENDER, SUBJECT, BODY);
+        message2.setFlag(Flag.X_STORE_1, true);
+        message2.setFlag(Flag.X_STORE_2, false);
+
+        final MimeMessage message3 = buildTestMessage(RECIPIENT_TO, SENDER, SUBJECT, BODY);
+        message3.setFlag(Flag.X_STORE_1, false);
+        message3.setFlag(Flag.X_STORE_2, true);
+        message3.setFlag(Flag.X_DOWNLOADED_FULL, true);
+
+        final MimeMessage message4 = buildTestMessage(RECIPIENT_TO, SENDER, SUBJECT, BODY);
+        message4.setFlag(Flag.X_STORE_1, true);
+        message4.setFlag(Flag.X_STORE_2, true);
+        message4.setFlag(Flag.X_DOWNLOADED_FULL, true);
+
+        final MimeMessage message5 = buildTestMessage(RECIPIENT_TO, SENDER, SUBJECT, BODY);
+        message5.setFlag(Flag.X_DOWNLOADED_FULL, true);
+
+        final MimeMessage message6 = buildTestMessage(RECIPIENT_TO, SENDER, SUBJECT, BODY);
+        message6.setFlag(Flag.X_DOWNLOADED_PARTIAL, true);
+
+        final MimeMessage message7 = buildTestMessage(RECIPIENT_TO, SENDER, SUBJECT, BODY);
+        message7.setFlag(Flag.DELETED, true);
+
+        Message[] allOriginals = new Message[] { 
+                message1, message2, message3, message4, message5, message6, message7 };
+        
+        mFolder.open(OpenMode.READ_WRITE, null);
+        mFolder.appendMessages(allOriginals);
+        mFolder.close(false);
+        
+        // Null lists are the same as empty lists - return all messages
+        mFolder.open(OpenMode.READ_WRITE, null);
+
+        int allMessages = mFolder.getMessageCount();
+        assertEquals("all messages", 7, allMessages);
+
+        int storeFlag1 = mFolder.getMessageCount(new Flag[] { Flag.X_STORE_1 }, null);
+        assertEquals("store flag 1", 2, storeFlag1);
+        
+        int storeFlag1NotFlag2 = mFolder.getMessageCount(
+                new Flag[] { Flag.X_STORE_1 }, new Flag[] { Flag.X_STORE_2 });
+        assertEquals("store flag 1, not 2", 1, storeFlag1NotFlag2);
+
+        int downloadedFull = mFolder.getMessageCount(new Flag[] { Flag.X_DOWNLOADED_FULL }, null);
+        assertEquals("downloaded full", 4, downloadedFull);
+        
+        int storeFlag2Full = mFolder.getMessageCount(
+                new Flag[] { Flag.X_STORE_2, Flag.X_DOWNLOADED_FULL }, null);
+        assertEquals("store flag 2, full", 2, storeFlag2Full);
+
+        int notDeleted = mFolder.getMessageCount(null, new Flag[] { Flag.DELETED });
+        assertEquals("not deleted", 6, notDeleted);
+    }
+
+    /**
      * Test unread messages count
      */
     public void testUnreadMessages() throws MessagingException {
@@ -874,6 +944,28 @@ public class LocalStoreUnitTests extends AndroidTestCase {
     }
 
     /**
+     * Test for setExtendedHeader() and getExtendedHeader()  
+     */
+    public void testExtendedHeader() throws MessagingException {
+        MimeMessage message = new MimeMessage();
+        message.setUid("message1");
+        mFolder.appendMessages(new Message[] { message });
+
+        message.setUid("message2");
+        message.setExtendedHeader("X-Header1", "value1");
+        message.setExtendedHeader("X-Header2", "value2\r\n value3\n value4\r\n");
+        mFolder.appendMessages(new Message[] { message });
+        
+        LocalMessage message1 = (LocalMessage) mFolder.getMessage("message1");
+        assertNull("none existent header", message1.getExtendedHeader("X-None-Existent"));
+        
+        LocalMessage message2 = (LocalMessage) mFolder.getMessage("message2");
+        assertEquals("header 1", "value1", message2.getExtendedHeader("X-Header1"));
+        assertEquals("header 2", "value2 value3 value4", message2.getExtendedHeader("X-Header2"));
+        assertNull("header 3", message2.getExtendedHeader("X-Header3"));
+    }
+    
+    /**
      * Tests for database version.
      */
     public void testDbVersion() throws MessagingException, URISyntaxException {
@@ -978,7 +1070,7 @@ public class LocalStoreUnitTests extends AndroidTestCase {
         // check if data are expected
         final ContentValues actualMessage = cursorToContentValues(c,
                 new String[] { "primary", "integer", "integer", "text" });
-       assertEquals("messages table cursor does not have expected values",
+        assertEquals("messages table cursor does not have expected values",
                 expectedMessage, actualMessage);
         c.close();
 
@@ -1187,6 +1279,57 @@ public class LocalStoreUnitTests extends AndroidTestCase {
     }
 
     /**
+     * Tests for database upgrade from version 23 to current version.
+     */
+    public void testDbUpgrade23ToLatest() throws MessagingException, URISyntaxException {
+        final URI uri = new URI(mLocalStoreUri);
+        final String dbPath = uri.getPath();
+        SQLiteDatabase db = SQLiteDatabase.openOrCreateDatabase(dbPath, null);
+
+        // create sample version 23 db tables
+        createSampleDb(db, 23);
+
+        // sample message data and expected data
+        final ContentValues initialMessage = new ContentValues();
+        initialMessage.put("folder_id", (long) 2);        // folder_id type integer == Long
+        initialMessage.put("internal_date", (long) 3);    // internal_date type integer == Long
+        final ContentValues expectedMessage = new ContentValues(initialMessage);
+        expectedMessage.put("id", db.insert("messages", null, initialMessage));
+
+        db.close();
+
+        // upgrade database 23 to latest
+        LocalStore.newInstance(mLocalStoreUri, getContext(), null);
+
+        // added message_id column should be initialized as null
+        expectedMessage.put("message_id", (String) null);    // message_id type text == String
+
+        // database should be upgraded
+        db = SQLiteDatabase.openOrCreateDatabase(dbPath, null);
+        assertEquals("database should be upgraded", DATABASE_VERSION, db.getVersion());
+        Cursor c;
+        
+        // check for all "latest version" tables
+        checkAllTablesFound(db);
+
+        // check message table
+        c = db.query("messages",
+                new String[] { "id", "folder_id", "internal_date", "message_id" },
+                null, null, null, null, null);
+        // check if data is available
+        assertTrue("messages table should have one data", c.moveToNext());
+        
+        // check if data are expected
+        final ContentValues actualMessage = cursorToContentValues(c,
+                new String[] { "primary", "integer", "integer", "text" });
+        assertEquals("messages table cursor does not have expected values",
+                expectedMessage, actualMessage);
+        c.close();
+
+        db.close();
+    }
+
+   /**
      * Checks the database to confirm that all tables, with all expected columns are found.
      */
     private void checkAllTablesFound(SQLiteDatabase db) {
@@ -1204,7 +1347,7 @@ public class LocalStoreUnitTests extends AndroidTestCase {
                         "to_list", "cc_list", "bcc_list", "reply_to_list",
                         "html_content", "text_content", "attachment_count",
                         "internal_date", "store_flag_1", "store_flag_2", "flag_downloaded_full",
-                        "flag_downloaded_partial", "flag_deleted" }
+                        "flag_downloaded_partial", "flag_deleted", "x_headers" }
                 ));
         assertTrue("messages", foundNames.containsAll(expectedNames));
         
@@ -1243,6 +1386,7 @@ public class LocalStoreUnitTests extends AndroidTestCase {
                    ((version >= 23) ? 
                            ", flag_downloaded_full INTEGER, flag_downloaded_partial INTEGER" : "") +
                    ((version >= 23) ? ", flag_deleted INTEGER" : "") +
+                   ((version >= 24) ? ", x_headers TEXT" : "") +
                    ")");
         db.execSQL("DROP TABLE IF EXISTS attachments");
         db.execSQL("CREATE TABLE attachments (id INTEGER PRIMARY KEY, message_id INTEGER," +

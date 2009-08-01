@@ -16,6 +16,7 @@
 
 package com.android.email.mail.store;
 
+import com.android.email.mail.Flag;
 import com.android.email.mail.Folder;
 import com.android.email.mail.MessagingException;
 import com.android.email.mail.Transport;
@@ -113,9 +114,21 @@ public class ImapStoreUnitTests extends AndroidTestCase {
     /**
      * TODO: Test the operation of checkSettings()
      * TODO: Test small Store & Folder functions that manage folders & namespace
-     * TODO: Test small Folder functions that don't really do anything in Imap (if any)
      */   
-    
+
+    /**
+     * Test small Folder functions that don't really do anything in Imap
+     * TODO: Test all of the small Folder functions.
+     */
+    public void testSmallFolderFunctions() throws MessagingException {
+        // getPermanentFlags() returns { Flag.DELETED, Flag.SEEN }
+        Flag[] flags = mFolder.getPermanentFlags();
+        assertEquals(2, flags.length);
+        // TODO: Write flags into hashset and compare them to a hashset and compare them
+        assertEquals(Flag.DELETED, flags[0]);
+        assertEquals(Flag.SEEN, flags[1]);
+    }
+
     /**
      * Lightweight test to confirm that IMAP hasn't implemented any folder roles yet.
      * 
@@ -175,5 +188,34 @@ public class ImapStoreUnitTests extends AndroidTestCase {
                 "* OK [UNSEEN 0]",
                 "* OK [UIDNEXT 1]",
                 "2 OK [READ-WRITE] INBOX selected. (Success)"});
+    }
+    
+    /**
+     * Test for getUnreadMessageCount with quoted string in the middle of response.
+     */
+    public void testGetUnreadMessageCountWithQuotedString() throws Exception {
+        MockTransport mock = openAndInjectMockTransport();
+        setupOpenFolder(mock);
+        mock.expect("3 STATUS \"INBOX\" \\(UNSEEN\\)", new String[] {
+                "* STATUS \"INBOX\" (UNSEEN 2)",
+                "3 OK STATUS completed"});
+        mFolder.open(OpenMode.READ_WRITE, null);
+        int unreadCount = mFolder.getUnreadMessageCount();
+        assertEquals("getUnreadMessageCount with quoted string", 2, unreadCount);
+    }
+
+    /**
+     * Test for getUnreadMessageCount with literal string in the middle of response.
+     */
+    public void testGetUnreadMessageCountWithLiteralString() throws Exception {
+        MockTransport mock = openAndInjectMockTransport();
+        setupOpenFolder(mock);
+        mock.expect("3 STATUS \"INBOX\" \\(UNSEEN\\)", new String[] {
+                "* STATUS {5}",
+                "INBOX (UNSEEN 10)",
+                "3 OK STATUS completed"});
+        mFolder.open(OpenMode.READ_WRITE, null);
+        int unreadCount = mFolder.getUnreadMessageCount();
+        assertEquals("getUnreadMessageCount with literal string", 10, unreadCount);
     }
 }
