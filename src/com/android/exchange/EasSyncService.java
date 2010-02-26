@@ -91,6 +91,9 @@ public class EasSyncService extends AbstractSyncService {
     static private final String PING_COMMAND = "Ping";
     static private final int COMMAND_TIMEOUT = 20*SECONDS;
 
+    // Define our default protocol version as 2.5 (Exchange 2003)
+    static private final String DEFAULT_PROTOCOL_VERSION = "2.5";
+
     /**
      * We start with an 8 minute timeout, and increase/decrease by 3 minutes at a time.  There's
      * no point having a timeout shorter than 5 minutes, I think; at that point, we can just let
@@ -119,7 +122,7 @@ public class EasSyncService extends AbstractSyncService {
     static private final int PING_FALLBACK_PIM = 25;
 
     // Reasonable default
-    String mProtocolVersion = "2.5";
+    public String mProtocolVersion = DEFAULT_PROTOCOL_VERSION;
     public Double mProtocolVersionDouble;
     protected String mDeviceId = null;
     private String mDeviceType = "Android";
@@ -515,6 +518,8 @@ public class EasSyncService extends AbstractSyncService {
      * @throws EasParserException
      */
     public void runAccountMailbox() throws IOException, EasParserException {
+        // We'll reuse this ContentValues object
+        ContentValues cv = new ContentValues();
         // Initialize exit status to success
         mExitStatus = EmailServiceStatus.SUCCESS;
         try {
@@ -528,7 +533,7 @@ public class EasSyncService extends AbstractSyncService {
             if (mAccount.mSyncKey == null) {
                 mAccount.mSyncKey = "0";
                 userLog("Account syncKey INIT to 0");
-                ContentValues cv = new ContentValues();
+                cv.clear();
                 cv.put(AccountColumns.SYNC_KEY, mAccount.mSyncKey);
                 mAccount.update(mContext, cv);
             }
@@ -539,7 +544,7 @@ public class EasSyncService extends AbstractSyncService {
             }
 
             // When we first start up, change all mailboxes to push.
-            ContentValues cv = new ContentValues();
+            cv.clear();
             cv.put(Mailbox.SYNC_INTERVAL, Mailbox.CHECK_INTERVAL_PUSH);
             if (mContentResolver.update(Mailbox.CONTENT_URI, cv,
                     WHERE_ACCOUNT_AND_SYNC_INTERVAL_PING,
@@ -547,7 +552,7 @@ public class EasSyncService extends AbstractSyncService {
                 SyncManager.kick("change ping boxes to push");
             }
 
-            // Determine our protocol version, if we haven't already
+            // Determine our protocol version, if we haven't already and save it in the Account
             if (mAccount.mProtocolVersion == null) {
                 userLog("Determine EAS protocol version");
                 HttpResponse resp = sendHttpClientOptions();
@@ -564,6 +569,10 @@ public class EasSyncService extends AbstractSyncService {
                         }
                         mProtocolVersionDouble = Double.parseDouble(mProtocolVersion);
                         mAccount.mProtocolVersion = mProtocolVersion;
+                        // Save the protocol version
+                        cv.clear();
+                        cv.put(Account.PROTOCOL_VERSION, mProtocolVersion);
+                        mAccount.update(mContext, cv);
                         userLog(versions);
                         userLog("Using version ", mProtocolVersion);
                     } else {
@@ -578,7 +587,7 @@ public class EasSyncService extends AbstractSyncService {
 
             // Change all pushable boxes to push when we start the account mailbox
             if (mAccount.mSyncInterval == Account.CHECK_INTERVAL_PUSH) {
-                cv = new ContentValues();
+                cv.clear();
                 cv.put(Mailbox.SYNC_INTERVAL, Mailbox.CHECK_INTERVAL_PUSH);
                 if (mContentResolver.update(Mailbox.CONTENT_URI, cv,
                         SyncManager.WHERE_IN_ACCOUNT_AND_PUSHABLE,
@@ -613,7 +622,7 @@ public class EasSyncService extends AbstractSyncService {
                 }
 
                 // Change all push/hold boxes to push
-                cv = new ContentValues();
+                cv.clear();
                 cv.put(Mailbox.SYNC_INTERVAL, Account.CHECK_INTERVAL_PUSH);
                 if (mContentResolver.update(Mailbox.CONTENT_URI, cv,
                         WHERE_PUSH_HOLD_NOT_ACCOUNT_MAILBOX,
@@ -1075,11 +1084,12 @@ public class EasSyncService extends AbstractSyncService {
         mExitStatus = EXIT_DONE;
     }
 
-    protected void setupService() {
+    protected boolean setupService() {
         // Make sure account and mailbox are always the latest from the database
         mAccount = Account.restoreAccountWithId(mContext, mAccount.mId);
+        if (mAccount == null) return false;
         mMailbox = Mailbox.restoreMailboxWithId(mContext, mMailbox.mId);
-
+        if (mMailbox == null) return false;
         mThread = Thread.currentThread();
         android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_BACKGROUND);
         TAG = mThread.getName();
@@ -1088,13 +1098,22 @@ public class EasSyncService extends AbstractSyncService {
         mHostAddress = ha.mAddress;
         mUserName = ha.mLogin;
         mPassword = ha.mPassword;
+
+        // Set up our protocol version from the Account
+        mProtocolVersion = mAccount.mProtocolVersion;
+        // If it hasn't been set up, start with default version
+        if (mProtocolVersion == null) {
+            mProtocolVersion = DEFAULT_PROTOCOL_VERSION;
+        }
+        mProtocolVersionDouble = Double.parseDouble(mProtocolVersion);
+        return true;
     }
 
     /* (non-Javadoc)
      * @see java.lang.Runnable#run()
      */
     public void run() {
-        setupService();
+        if (!setupService()) return;
 
         try {
             SyncManager.callback().syncMailboxStatus(mMailboxId, EmailServiceStatus.IN_PROGRESS, 0);
@@ -1111,8 +1130,6 @@ public class EasSyncService extends AbstractSyncService {
                 runAccountMailbox();
             } else {
                 AbstractSyncAdapter target;
-                mProtocolVersion = mAccount.mProtocolVersion;
-                mProtocolVersionDouble = Double.parseDouble(mProtocolVersion);
                 if (mMailbox.mType == Mailbox.TYPE_CONTACTS) {
                     target = new ContactsSyncAdapter(mMailbox, this);
                 } else {
