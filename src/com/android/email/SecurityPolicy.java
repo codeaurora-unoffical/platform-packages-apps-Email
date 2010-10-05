@@ -74,15 +74,6 @@ public class SecurityPolicy {
     private static final int ACCOUNT_FLAGS_COLUMN_ID = 0;
     private static final int ACCOUNT_FLAGS_COLUMN_FLAGS = 1;
 
-   /**
-    * These are hardcoded limits based on knowledge of the current DevicePolicyManager
-    * and screen lock mechanisms.  Wherever possible, these should be replaced with queries of
-    * dynamic capabilities of the device (e.g. what password modes are supported?)
-    */
-   private static final int LIMIT_MIN_PASSWORD_LENGTH = 16;
-   private static final int LIMIT_PASSWORD_MODE = PolicySet.PASSWORD_MODE_STRONG;
-   private static final int LIMIT_SCREENLOCK_TIME = PolicySet.SCREEN_LOCK_TIME_MAX;
-
     /**
      * Get the security policy instance
      */
@@ -186,33 +177,6 @@ public class SecurityPolicy {
             mDPM = (DevicePolicyManager) mContext.getSystemService(Context.DEVICE_POLICY_SERVICE);
         }
         return mDPM;
-    }
-
-    /**
-     * API: Query used to determine if a given policy is "possible" (irrespective of current
-     * device state.  This is used when creating new accounts.
-     *
-     * TODO: This is hardcoded based on knowledge of the current DevicePolicyManager
-     * and screen lock mechanisms.  It would be nice to replace these tests with something
-     * more dynamic.
-     *
-     * @param policies the policies requested
-     * @return true if the policies are supported, false if not supported
-     */
-    public boolean isSupported(PolicySet policies) {
-        if (policies.mMinPasswordLength > LIMIT_MIN_PASSWORD_LENGTH) {
-            return false;
-        }
-        if (policies.mPasswordMode > LIMIT_PASSWORD_MODE ) {
-            return false;
-        }
-        // No limit on password fail count
-        if (policies.mMaxScreenLockTime > LIMIT_SCREENLOCK_TIME ) {
-            return false;
-        }
-        // No limit on remote wipe capable
-
-        return true;
     }
 
     /**
@@ -435,7 +399,6 @@ public class SecurityPolicy {
         private static final int PASSWORD_LENGTH_MASK = 31;
         private static final int PASSWORD_LENGTH_SHIFT = 0;
         public static final int PASSWORD_LENGTH_MAX = 30;
-        private static final int PASSWORD_LENGTH_EXCEEDED = 31;
             // bits 5..8: password mode
         private static final int PASSWORD_MODE_SHIFT = 5;
         private static final int PASSWORD_MODE_MASK = 15 << PASSWORD_MODE_SHIFT;
@@ -453,11 +416,31 @@ public class SecurityPolicy {
             // bit 25: remote wipe capability required
         private static final int REQUIRE_REMOTE_WIPE = 1 << 25;
 
-        public final int mMinPasswordLength;
-        public final int mPasswordMode;
-        public final int mMaxPasswordFails;
-        public final int mMaxScreenLockTime;
-        public final boolean mRequireRemoteWipe;
+        /*package*/ final int mMinPasswordLength;
+        /*package*/ final int mPasswordMode;
+        /*package*/ final int mMaxPasswordFails;
+        /*package*/ final int mMaxScreenLockTime;
+        /*package*/ final boolean mRequireRemoteWipe;
+
+        public int getMinPasswordLength() {
+            return mMinPasswordLength;
+        }
+
+        public int getPasswordMode() {
+            return mPasswordMode;
+        }
+
+        public int getMaxPasswordFails() {
+            return mMaxPasswordFails;
+        }
+
+        public int getMaxScreenLockTime() {
+            return mMaxScreenLockTime;
+        }
+
+        public boolean isRequireRemoteWipe() {
+            return mRequireRemoteWipe;
+        }
 
         /**
          * Create from raw values.
@@ -470,24 +453,30 @@ public class SecurityPolicy {
          */
         public PolicySet(int minPasswordLength, int passwordMode, int maxPasswordFails,
                 int maxScreenLockTime, boolean requireRemoteWipe) throws IllegalArgumentException {
-            // This value has a hard limit which cannot be supported if exceeded.  Setting the
-            // exceeded value will force isSupported() to return false.
-            if (minPasswordLength > PASSWORD_LENGTH_MAX) {
-                minPasswordLength = PASSWORD_LENGTH_EXCEEDED;
+            // If we're not enforcing passwords, make sure we clean up related values, since EAS
+            // can send non-zero values for any or all of these
+            if (passwordMode == PASSWORD_MODE_NONE) {
+                maxPasswordFails = 0;
+                maxScreenLockTime = 0;
+                minPasswordLength = 0;
+            } else {
+                if ((passwordMode != PASSWORD_MODE_SIMPLE) &&
+                        (passwordMode != PASSWORD_MODE_STRONG)) {
+                    throw new IllegalArgumentException("password mode");
+                }
+                // The next value has a hard limit which cannot be supported if exceeded.
+                if (minPasswordLength > PASSWORD_LENGTH_MAX) {
+                    throw new IllegalArgumentException("password length");
+                }
+                // This value can be reduced (which actually increases security) if necessary
+                if (maxPasswordFails > PASSWORD_MAX_FAILS_MAX) {
+                    maxPasswordFails = PASSWORD_MAX_FAILS_MAX;
+                }
+                // This value can be reduced (which actually increases security) if necessary
+                if (maxScreenLockTime > SCREEN_LOCK_TIME_MAX) {
+                    maxScreenLockTime = SCREEN_LOCK_TIME_MAX;
+                }
             }
-            if (passwordMode < PASSWORD_MODE_NONE
-                    || passwordMode > PASSWORD_MODE_STRONG) {
-                throw new IllegalArgumentException("password mode");
-            }
-            // This value can be reduced (which actually increases security) if necessary
-            if (maxPasswordFails > PASSWORD_MAX_FAILS_MAX) {
-                maxPasswordFails = PASSWORD_MAX_FAILS_MAX;
-            }
-            // This value can be reduced (which actually increases security) if necessary
-            if (maxScreenLockTime > SCREEN_LOCK_TIME_MAX) {
-                maxScreenLockTime = SCREEN_LOCK_TIME_MAX;
-            }
-
             mMinPasswordLength = minPasswordLength;
             mPasswordMode = passwordMode;
             mMaxPasswordFails = maxPasswordFails;
