@@ -33,7 +33,10 @@ import android.test.suitebuilder.annotation.SmallTest;
 
 /**
  * This is a series of unit tests for backup/restore of the SecurityPolicy class.
- */
+ *
+ * You can run this entire test case with:
+ *   runtest -c com.android.email.SecurityPolicyTests email
+*/
 @MediumTest
 public class SecurityPolicyTests extends ProviderTestCase2<EmailProvider> {
 
@@ -86,6 +89,34 @@ public class SecurityPolicyTests extends ProviderTestCase2<EmailProvider> {
         SecurityPolicy sp = SecurityPolicy.getInstance(mMockContext);
         sp.setContext(mMockContext);
         return sp;
+    }
+
+    public void testPolicySetConstructor() {
+        // We know that EMPTY_POLICY_SET doesn't generate an Exception or we wouldn't be here
+        // Try some illegal parameters
+        try {
+            new PolicySet(100, PolicySet.PASSWORD_MODE_SIMPLE, 0, 0, false);
+            fail("Too-long password allowed");
+        } catch (IllegalArgumentException e) {
+        }
+        try {
+            new PolicySet(0, PolicySet.PASSWORD_MODE_STRONG + 1, 0, 0, false);
+            fail("Illegal password mode allowed");
+        } catch (IllegalArgumentException e) {
+        }
+        PolicySet ps = new PolicySet(0, PolicySet.PASSWORD_MODE_SIMPLE, 0,
+                PolicySet.SCREEN_LOCK_TIME_MAX + 1, false);
+        assertEquals(PolicySet.SCREEN_LOCK_TIME_MAX, ps.getMaxScreenLockTime());
+        ps = new PolicySet(0, PolicySet.PASSWORD_MODE_SIMPLE,
+                PolicySet.PASSWORD_MAX_FAILS_MAX + 1, 0, false);
+        assertEquals(PolicySet.PASSWORD_MAX_FAILS_MAX, ps.getMaxPasswordFails());
+        // All password related fields should be zero when password mode is NONE
+        // Illegal values for these fields should be ignored
+        ps = new PolicySet(999/*length*/, PolicySet.PASSWORD_MODE_NONE,
+                999/*fails*/, 9999/*screenlock*/, false);
+        assertEquals(0, ps.mMinPasswordLength);
+        assertEquals(0, ps.mMaxScreenLockTime);
+        assertEquals(0, ps.mMaxPasswordFails);
     }
 
     /**
@@ -141,7 +172,7 @@ public class SecurityPolicyTests extends ProviderTestCase2<EmailProvider> {
         // pw length and pw mode - max logic - will *not* change because smaller #s here
         // fail count and lock timer - min logic - will change because smaller #s here
         // wipe required - OR logic - will change here because true
-        PolicySet p5in = new PolicySet(4, PolicySet.PASSWORD_MODE_NONE, 5, 6, true);
+        PolicySet p5in = new PolicySet(4, PolicySet.PASSWORD_MODE_SIMPLE, 5, 6, true);
         Account a5 = ProviderTestUtils.setupAccount("sec-5", false, mMockContext);
         p5in.writeAccount(a5, null, true, mMockContext);
         PolicySet p5out = sp.computeAggregatePolicy();
@@ -178,9 +209,9 @@ public class SecurityPolicyTests extends ProviderTestCase2<EmailProvider> {
      */
     @SmallTest
     public void testFieldIsolation() {
-        PolicySet p = new PolicySet(PolicySet.PASSWORD_LENGTH_MAX, 0, 0, 0, false);
+        PolicySet p = new PolicySet(PolicySet.PASSWORD_LENGTH_MAX, PolicySet.PASSWORD_MODE_SIMPLE,
+                0, 0, false);
         assertEquals(PolicySet.PASSWORD_LENGTH_MAX, p.mMinPasswordLength);
-        assertEquals(0, p.mPasswordMode);
         assertEquals(0, p.mMaxPasswordFails);
         assertEquals(0, p.mMaxScreenLockTime);
         assertFalse(p.mRequireRemoteWipe);
@@ -188,51 +219,30 @@ public class SecurityPolicyTests extends ProviderTestCase2<EmailProvider> {
         p = new PolicySet(0, PolicySet.PASSWORD_MODE_STRONG, 0, 0, false);
         assertEquals(0, p.mMinPasswordLength);
         assertEquals(PolicySet.PASSWORD_MODE_STRONG, p.mPasswordMode);
+        assertEquals(0, p.mMinPasswordLength);
         assertEquals(0, p.mMaxPasswordFails);
         assertEquals(0, p.mMaxScreenLockTime);
         assertFalse(p.mRequireRemoteWipe);
 
-        p = new PolicySet(0, 0, PolicySet.PASSWORD_MAX_FAILS_MAX, 0, false);
+        p = new PolicySet(0, PolicySet.PASSWORD_MODE_SIMPLE, PolicySet.PASSWORD_MAX_FAILS_MAX, 0,
+                false);
         assertEquals(0, p.mMinPasswordLength);
-        assertEquals(0, p.mPasswordMode);
         assertEquals(PolicySet.PASSWORD_MAX_FAILS_MAX, p.mMaxPasswordFails);
         assertEquals(0, p.mMaxScreenLockTime);
         assertFalse(p.mRequireRemoteWipe);
 
-        p = new PolicySet(0, 0, 0, PolicySet.SCREEN_LOCK_TIME_MAX, false);
+        p = new PolicySet(0, PolicySet.PASSWORD_MODE_SIMPLE, 0, PolicySet.SCREEN_LOCK_TIME_MAX,
+                false);
         assertEquals(0, p.mMinPasswordLength);
-        assertEquals(0, p.mPasswordMode);
         assertEquals(0, p.mMaxPasswordFails);
         assertEquals(PolicySet.SCREEN_LOCK_TIME_MAX, p.mMaxScreenLockTime);
         assertFalse(p.mRequireRemoteWipe);
 
-        p = new PolicySet(0, 0, 0, 0, true);
+        p = new PolicySet(0, PolicySet.PASSWORD_MODE_NONE, 0, 0, true);
         assertEquals(0, p.mMinPasswordLength);
-        assertEquals(0, p.mPasswordMode);
         assertEquals(0, p.mMaxPasswordFails);
         assertEquals(0, p.mMaxScreenLockTime);
         assertTrue(p.mRequireRemoteWipe);
-    }
-
-    /**
-     * Test creation of policies with unsupported ranges
-     */
-    @SmallTest
-    public void testFieldRanges() {
-        SecurityPolicy sp = getSecurityPolicy();
-        // Overlong password length cannot be supported
-        PolicySet p = new PolicySet(PolicySet.PASSWORD_LENGTH_MAX + 1, 0, 0, 0, false);
-        assertFalse(sp.isSupported(p));
-
-        // Too many wipes before reboot can be supported (by reducing to the max)
-        p = new PolicySet(0, 0, PolicySet.PASSWORD_MAX_FAILS_MAX + 1, 0, false);
-        assertTrue(sp.isSupported(p));
-        assertEquals(PolicySet.PASSWORD_MAX_FAILS_MAX, p.mMaxPasswordFails);
-
-        // Too long lock time can be supported (by reducing to the max)
-        p = new PolicySet(0, 0, 0, PolicySet.SCREEN_LOCK_TIME_MAX + 1, false);
-        assertTrue(sp.isSupported(p));
-        assertEquals(PolicySet.SCREEN_LOCK_TIME_MAX, p.mMaxScreenLockTime);
     }
 
     /**

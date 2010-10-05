@@ -153,10 +153,7 @@ public class EasSyncService extends AbstractSyncService {
     static private final int PING_MINUTES = 60; // in seconds
     static private final int PING_FUDGE_LOW = 10;
     static private final int PING_STARTING_HEARTBEAT = (8*PING_MINUTES)-PING_FUDGE_LOW;
-    static private final int PING_MIN_HEARTBEAT = (5*PING_MINUTES)-PING_FUDGE_LOW;
-    static private final int PING_MAX_HEARTBEAT = (17*PING_MINUTES)-PING_FUDGE_LOW;
     static private final int PING_HEARTBEAT_INCREMENT = 3*PING_MINUTES;
-    static private final int PING_FORCE_HEARTBEAT = 2*PING_MINUTES;
 
     // Maximum number of times we'll allow a sync to "loop" with MoreAvailable true before
     // forcing it to stop.  This number has been determined empirically.
@@ -175,12 +172,17 @@ public class EasSyncService extends AbstractSyncService {
     // MSFT's custom HTTP result code indicating the need to provision
     static private final int HTTP_NEED_PROVISIONING = 449;
 
+    // The EAS protocol Provision status for "we implement all of the policies"
+    static private final String PROVISION_STATUS_OK = "1";
+    // The EAS protocol Provision status meaning "we partially implement the policies"
+    static private final String PROVISION_STATUS_PARTIAL = "2";
+
     // Reasonable default
     public String mProtocolVersion = Eas.DEFAULT_PROTOCOL_VERSION;
     public Double mProtocolVersionDouble;
     protected String mDeviceId = null;
-    private String mDeviceType = "Android";
-    private String mAuthString = null;
+    /*package*/ String mDeviceType = "Android";
+    /*package*/ String mAuthString = null;
     private String mCmdString = null;
     public String mHostAddress;
     public String mUserName;
@@ -192,12 +194,18 @@ public class EasSyncService extends AbstractSyncService {
     private ArrayList<String> mPingChangeList;
     // The HttpPost in progress
     private volatile HttpPost mPendingPost = null;
+    // Our heartbeat when we are waiting for ping boxes to be ready
+    /*package*/ int mPingForceHeartbeat = 2*PING_MINUTES;
+    // The minimum heartbeat we will send
+    /*package*/ int mPingMinHeartbeat = (5*PING_MINUTES)-PING_FUDGE_LOW;
+    // The maximum heartbeat we will send
+    /*package*/ int mPingMaxHeartbeat = (17*PING_MINUTES)-PING_FUDGE_LOW;
     // The ping time (in seconds)
-    private int mPingHeartbeat = PING_STARTING_HEARTBEAT;
+    /*package*/ int mPingHeartbeat = PING_STARTING_HEARTBEAT;
     // The longest successful ping heartbeat
     private int mPingHighWaterMark = 0;
     // Whether we've ever lowered the heartbeat
-    private boolean mPingHeartbeatDropped = false;
+    /*package*/ boolean mPingHeartbeatDropped = false;
     // Whether a POST was aborted due to alarm (watchdog alarm)
     private boolean mPostAborted = false;
     // Whether a POST was aborted due to reset
@@ -402,7 +410,7 @@ public class EasSyncService extends AbstractSyncService {
 
                 // Run second test here for provisioning failures...
                 Serializer s = new Serializer();
-                userLog("Try folder sync");
+                userLog("Validate: try folder sync");
                 s.start(Tags.FOLDER_FOLDER_SYNC).start(Tags.FOLDER_SYNC_KEY).text("0")
                     .end().end().done();
                 resp = svc.sendHttpClientPost("FolderSync", s.toByteArray());
@@ -410,14 +418,18 @@ public class EasSyncService extends AbstractSyncService {
                 // We'll get one of the following responses if policies are required by the server
                 if (code == HttpStatus.SC_FORBIDDEN || code == HTTP_NEED_PROVISIONING) {
                     // Get the policies and see if we are able to support them
+                    userLog("Validate: provisioning required");
                     if (svc.canProvision() != null) {
                         // If so, send the advisory Exception (the account may be created later)
+                        userLog("Validate: provisioning is possible");
                         throw new MessagingException(MessagingException.SECURITY_POLICIES_REQUIRED);
                     } else
+                        userLog("Validate: provisioning not possible");
                         // If not, send the unsupported Exception (the account won't be created)
                         throw new MessagingException(
                                 MessagingException.SECURITY_POLICIES_UNSUPPORTED);
                 } else if (code == HttpStatus.SC_NOT_FOUND) {
+                    userLog("Wrong address or bad protocol version");
                     // We get a 404 from OWA addresses (which are NOT EAS addresses)
                     throw new MessagingException(MessagingException.PROTOCOL_VERSION_UNSUPPORTED);
                 } else if (code != HttpStatus.SC_OK) {
@@ -772,8 +784,7 @@ public class EasSyncService extends AbstractSyncService {
      * TODO: make watchdog actually work (it doesn't understand our service w/Mailbox == 0)
      * TODO: figure out why sendHttpClientPost() hangs - possibly pool exhaustion
      */
-    static public GalResult searchGal(Context context, long accountId, String filter)
-    {
+    static public GalResult searchGal(Context context, long accountId, String filter) {
         Account acct = SyncManager.getAccountById(accountId);
         if (acct != null) {
             HostAuth ha = HostAuth.restoreHostAuthWithId(context, acct.mHostAuthKeyRecv);
@@ -1099,18 +1110,21 @@ public class EasSyncService extends AbstractSyncService {
      * @param method the method we are going to send
      * @param usePolicyKey whether or not a policy key should be sent in the headers
      */
-    private void setHeaders(HttpRequestBase method, boolean usePolicyKey) {
+    /*package*/ void setHeaders(HttpRequestBase method, boolean usePolicyKey) {
         method.setHeader("Authorization", mAuthString);
         method.setHeader("MS-ASProtocolVersion", mProtocolVersion);
         method.setHeader("Connection", "keep-alive");
         method.setHeader("User-Agent", mDeviceType + '/' + Eas.VERSION);
-        if (usePolicyKey && (mAccount != null)) {
-            String key = mAccount.mSecuritySyncKey;
-            if (key == null || key.length() == 0) {
-                return;
-            }
-             if (Eas.PARSER_LOG) {
-                userLog("Policy key: " , key);
+        if (usePolicyKey) {
+            // If there's an account in existence, use its key; otherwise (we're creating the
+            // account), send "0".  The server will respond with code 449 if there are policies
+            // to be enforced
+            String key = "0";
+            if (mAccount != null) {
+                String accountKey = mAccount.mSecuritySyncKey;
+                if (!TextUtils.isEmpty(accountKey)) {
+                    key = accountKey;
+                }
             }
             method.setHeader("X-MS-PolicyKey", key);
         }
@@ -1277,10 +1291,12 @@ public class EasSyncService extends AbstractSyncService {
             } else if (sp.isActive(ps)) {
                 // See if the required policies are in force; if they are, acknowledge the policies
                 // to the server and get the final policy key
-                String policyKey = acknowledgeProvision(pp.getPolicyKey());
+                String policyKey = acknowledgeProvision(pp.getPolicyKey(), PROVISION_STATUS_OK);
                 if (policyKey != null) {
                     // Write the final policy key to the Account and say we've been successful
                     ps.writeAccount(mAccount, policyKey, true, mContext);
+                    // Release any mailboxes that might be in a security hold
+                    SyncManager.releaseSecurityHold(mAccount);
                     return true;
                 }
             } else {
@@ -1314,15 +1330,20 @@ public class EasSyncService extends AbstractSyncService {
             InputStream is = resp.getEntity().getContent();
             ProvisionParser pp = new ProvisionParser(is, this);
             if (pp.parse()) {
-                // If true, we received policies from the server; see if they are supported by
-                // the framework; if so, return the ProvisionParser containing the policy set and
-                // temporary key
-                PolicySet ps = pp.getPolicySet();
-                // The PolicySet can be null if there are policies we don't know about (e.g. ones
-                // from Exchange 12.1)  If we have a PolicySet, then we ask whether the device can
-                // support the actual parameters of those policies.
-                if ((ps != null) && SecurityPolicy.getInstance(mContext).isSupported(ps)) {
+                // The PolicySet in the ProvisionParser will have the requirements for all KNOWN
+                // policies.  If others are required, hasSupportablePolicySet will be false
+                if (pp.hasSupportablePolicySet()) {
+                    // If the policies are supportable (in this context, meaning that there are no
+                    // completely unimplemented policies required), just return the parser itself
                     return pp;
+                } else {
+                    // Try to acknowledge using the "partial" status (i.e. we can partially
+                    // accommodate the required policies).  The server will agree to this if the
+                    // "allow non-provisionable devices" setting is enabled on the server
+                    String policyKey = acknowledgeProvision(pp.getPolicyKey(),
+                            PROVISION_STATUS_PARTIAL);
+                    // Return either the parser (success) or null (failure)
+                    return (policyKey != null) ? pp : null;
                 }
             }
         }
@@ -1338,14 +1359,15 @@ public class EasSyncService extends AbstractSyncService {
      * @throws IOException
      */
     private void acknowledgeRemoteWipe(String tempKey) throws IOException {
-        acknowledgeProvisionImpl(tempKey, true);
+        acknowledgeProvisionImpl(tempKey, PROVISION_STATUS_OK, true);
     }
 
-    private String acknowledgeProvision(String tempKey) throws IOException {
-        return acknowledgeProvisionImpl(tempKey, false);
+    private String acknowledgeProvision(String tempKey, String result) throws IOException {
+        return acknowledgeProvisionImpl(tempKey, result, false);
     }
 
-    private String acknowledgeProvisionImpl(String tempKey, boolean remoteWipe) throws IOException {
+    private String acknowledgeProvisionImpl(String tempKey, String status,
+            boolean remoteWipe) throws IOException {
         Serializer s = new Serializer();
         s.start(Tags.PROVISION_PROVISION).start(Tags.PROVISION_POLICIES);
         s.start(Tags.PROVISION_POLICY);
@@ -1354,11 +1376,11 @@ public class EasSyncService extends AbstractSyncService {
         s.data(Tags.PROVISION_POLICY_TYPE, getPolicyType());
 
         s.data(Tags.PROVISION_POLICY_KEY, tempKey);
-        s.data(Tags.PROVISION_STATUS, "1");
+        s.data(Tags.PROVISION_STATUS, status);
         s.end().end(); // PROVISION_POLICY, PROVISION_POLICIES
         if (remoteWipe) {
             s.start(Tags.PROVISION_REMOTE_WIPE);
-            s.data(Tags.PROVISION_STATUS, "1");
+            s.data(Tags.PROVISION_STATUS, PROVISION_STATUS_OK);
             s.end();
         }
         s.end().done(); // PROVISION_PROVISION
@@ -1368,7 +1390,7 @@ public class EasSyncService extends AbstractSyncService {
             InputStream is = resp.getEntity().getContent();
             ProvisionParser pp = new ProvisionParser(is, this);
             if (pp.parse()) {
-                // Return the final polic key from the ProvisionParser
+                // Return the final policy key from the ProvisionParser
                 return pp.getPolicyKey();
             }
         }
@@ -1541,6 +1563,10 @@ public class EasSyncService extends AbstractSyncService {
                 } catch (StaleFolderListException e) {
                     // We break out if we get told about a stale folder list
                     userLog("Ping interrupted; folder list requires sync...");
+                } catch (IllegalHeartbeatException e) {
+                    // If we're sending an illegal heartbeat, reset either the min or the max to
+                    // that heartbeat
+                    resetHeartbeats(e.mLegalHeartbeat);
                 } finally {
                     Thread.currentThread().setName(threadName);
                 }
@@ -1559,6 +1585,44 @@ public class EasSyncService extends AbstractSyncService {
             }
             throw e;
         }
+    }
+
+    /**
+     * Reset either our minimum or maximum ping heartbeat to a heartbeat known to be legal
+     * @param legalHeartbeat a known legal heartbeat (from the EAS server)
+     */
+    /*package*/ void resetHeartbeats(int legalHeartbeat) {
+        userLog("Resetting min/max heartbeat, legal = " + legalHeartbeat);
+        // We are here because the current heartbeat (mPingHeartbeat) is invalid.  Depending on
+        // whether the argument is above or below the current heartbeat, we can infer the need to
+        // change either the minimum or maximum heartbeat
+        if (legalHeartbeat > mPingHeartbeat) {
+            // The legal heartbeat is higher than the ping heartbeat; therefore, our minimum was
+            // too low.  We respond by raising either or both of the minimum heartbeat or the
+            // force heartbeat to the argument value
+            if (mPingMinHeartbeat < legalHeartbeat) {
+                mPingMinHeartbeat = legalHeartbeat;
+            }
+            if (mPingForceHeartbeat < legalHeartbeat) {
+                mPingForceHeartbeat = legalHeartbeat;
+            }
+            // If our minimum is now greater than the max, bring them together
+            if (mPingMinHeartbeat > mPingMaxHeartbeat) {
+                mPingMaxHeartbeat = legalHeartbeat;
+            }
+        } else if (legalHeartbeat < mPingHeartbeat) {
+            // The legal heartbeat is lower than the ping heartbeat; therefore, our maximum was
+            // too high.  We respond by lowering the maximum to the argument value
+            mPingMaxHeartbeat = legalHeartbeat;
+            // If our maximum is now less than the minimum, bring them together
+            if (mPingMaxHeartbeat < mPingMinHeartbeat) {
+                mPingMinHeartbeat = legalHeartbeat;
+            }
+        }
+        // Set current heartbeat to the legal heartbeat
+        mPingHeartbeat = legalHeartbeat;
+        // Allow the heartbeat logic to run
+        mPingHeartbeatDropped = false;
     }
 
     private void pushFallback(long mailboxId) {
@@ -1593,7 +1657,8 @@ public class EasSyncService extends AbstractSyncService {
         return false;
     }
 
-    private void runPingLoop() throws IOException, StaleFolderListException {
+    private void runPingLoop() throws IOException, StaleFolderListException,
+            IllegalHeartbeatException {
         int pingHeartbeat = mPingHeartbeat;
         userLog("runPingLoop");
         // Do push for all sync services here
@@ -1693,7 +1758,7 @@ public class EasSyncService extends AbstractSyncService {
                         userLog("Forcing ping after waiting for all boxes to be ready");
                     }
                     HttpResponse res =
-                        sendPing(s.toByteArray(), forcePing ? PING_FORCE_HEARTBEAT : pingHeartbeat);
+                        sendPing(s.toByteArray(), forcePing ? mPingForceHeartbeat : pingHeartbeat);
 
                     int code = res.getStatusLine().getStatusCode();
                     userLog("Ping response: ", code);
@@ -1719,11 +1784,11 @@ public class EasSyncService extends AbstractSyncService {
                                     mPingHighWaterMark = pingHeartbeat;
                                     userLog("Setting high water mark at: ", mPingHighWaterMark);
                                 }
-                                if ((pingHeartbeat < PING_MAX_HEARTBEAT) &&
+                                if ((pingHeartbeat < mPingMaxHeartbeat) &&
                                         !mPingHeartbeatDropped) {
                                     pingHeartbeat += PING_HEARTBEAT_INCREMENT;
-                                    if (pingHeartbeat > PING_MAX_HEARTBEAT) {
-                                        pingHeartbeat = PING_MAX_HEARTBEAT;
+                                    if (pingHeartbeat > mPingMaxHeartbeat) {
+                                        pingHeartbeat = mPingMaxHeartbeat;
                                     }
                                     userLog("Increasing ping heartbeat to ", pingHeartbeat, "s");
                                 }
@@ -1748,12 +1813,12 @@ public class EasSyncService extends AbstractSyncService {
                         // ping.
                     } else if (mPostAborted || isLikelyNatFailure(message)) {
                         long pingLength = SystemClock.elapsedRealtime() - pingTime;
-                        if ((pingHeartbeat > PING_MIN_HEARTBEAT) &&
+                        if ((pingHeartbeat > mPingMinHeartbeat) &&
                                 (pingHeartbeat > mPingHighWaterMark)) {
                             pingHeartbeat -= PING_HEARTBEAT_INCREMENT;
                             mPingHeartbeatDropped = true;
-                            if (pingHeartbeat < PING_MIN_HEARTBEAT) {
-                                pingHeartbeat = PING_MIN_HEARTBEAT;
+                            if (pingHeartbeat < mPingMinHeartbeat) {
+                                pingHeartbeat = mPingMinHeartbeat;
                             }
                             userLog("Decreased ping heartbeat to ", pingHeartbeat, "s");
                         } else if (mPostAborted) {
@@ -1823,7 +1888,7 @@ public class EasSyncService extends AbstractSyncService {
 
     private int parsePingResult(InputStream is, ContentResolver cr,
             HashMap<String, Integer> errorMap)
-        throws IOException, StaleFolderListException {
+            throws IOException, StaleFolderListException, IllegalHeartbeatException {
         PingParser pp = new PingParser(is, this);
         if (pp.parse()) {
             // True indicates some mailboxes need syncing...
