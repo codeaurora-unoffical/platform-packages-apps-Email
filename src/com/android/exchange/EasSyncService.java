@@ -124,11 +124,18 @@ public class EasSyncService extends AbstractSyncService {
     // Command timeout is the the time allowed for reading data from an open connection before an
     // IOException is thrown.  After a small added allowance, our watchdog alarm goes off (allowing
     // us to detect a silently dropped connection).  The allowance is defined below.
-    static private final int COMMAND_TIMEOUT = 20*SECONDS;
+    static private final int COMMAND_TIMEOUT = 30*SECONDS;
     // Connection timeout is the time given to connect to the server before reporting an IOException
     static private final int CONNECTION_TIMEOUT = 20*SECONDS;
     // The extra time allowed beyond the COMMAND_TIMEOUT before which our watchdog alarm triggers
     static private final int WATCHDOG_TIMEOUT_ALLOWANCE = 30*SECONDS;
+
+    // The amount of time the account mailbox will sleep if there are no pingable mailboxes
+    // This could happen if the sync time is set to "never"; we always want to check in from time
+    // to time, however, for folder list/policy changes
+    static private final int ACCOUNT_MAILBOX_SLEEP_TIME = 20*MINUTES;
+    static private final String ACCOUNT_MAILBOX_SLEEP_TEXT =
+        "Account mailbox sleeping for " + (ACCOUNT_MAILBOX_SLEEP_TIME / MINUTES) + "m";
 
     static private final String AUTO_DISCOVER_SCHEMA_PREFIX =
         "http://schemas.microsoft.com/exchange/autodiscover/mobilesync/";
@@ -1275,17 +1282,28 @@ public class EasSyncService extends AbstractSyncService {
             }
             if (pp.getRemoteWipe()) {
                 // We've gotten a remote wipe command
+                SyncManager.alwaysLog("!!! Remote wipe request received");
+                // Start by setting the account to security hold
+                sp.setAccountHoldFlag(mAccount, true);
+                // Force a stop to any running syncs for this account (except this one)
+                SyncManager.stopNonAccountMailboxSyncsForAccount(mAccount.mId);
+
                 // If we're not the admin, we can't do the wipe, so just return
-                if (!sp.isActiveAdmin()) return false;
+                if (!sp.isActiveAdmin()) {
+                    SyncManager.alwaysLog("!!! Not device admin; can't wipe");
+                    return false;
+                }
                 // First, we've got to acknowledge it, but wrap the wipe in try/catch so that
                 // we wipe the device regardless of any errors in acknowledgment
                 try {
+                    SyncManager.alwaysLog("!!! Acknowledging remote wipe to server");
                     acknowledgeRemoteWipe(pp.getPolicyKey());
                 } catch (Exception e) {
                     // Because remote wipe is such a high priority task, we don't want to
                     // circumvent it if there's an exception in acknowledgment
                 }
                 // Then, tell SecurityPolicy to wipe the device
+                SyncManager.alwaysLog("!!! Executing remote wipe");
                 sp.remoteWipe();
                 return false;
             } else if (sp.isActive(ps)) {
@@ -1860,10 +1878,11 @@ public class EasSyncService extends AbstractSyncService {
                 userLog("pingLoop waiting for initial sync of ", uninitCount, " box(es)");
                 sleep(10*SECONDS, true);
             } else {
-                // We've got nothing to do, so we'll check again in 30 minutes at which time
-                // we'll update the folder list.  Let the device sleep in the meantime...
-                userLog("pingLoop sleeping for 30m");
-                sleep(30*MINUTES, true);
+                // We've got nothing to do, so we'll check again in 20 minutes at which time
+                // we'll update the folder list, check for policy changes and/or remote wipe, etc.
+                // Let the device sleep in the meantime...
+                userLog(ACCOUNT_MAILBOX_SLEEP_TEXT);
+                sleep(ACCOUNT_MAILBOX_SLEEP_TIME, true);
             }
         }
 
