@@ -10,13 +10,13 @@
     <string name="summary_title_paused" msgid="8936561302881926595">"Pausado"</string>
     <string name="summary_subtitle_uploading_format" msgid="8787409179557302869">"%1$d%% • %2$d fotos • %3$d videos"</string>
     <string name="summary_subtitle_counts_format" msgid="7867903205999702138">"%1$d fotos • %2$d videos"</string>
-    <string name="summary_subtitle_paused_low_battery" msgid="7030423720574078362">"batería baja"</string>
-    <string name="summary_subtitle_paused_photos_quota" msgid="3057279018089658614">"se excedió el cupo de fotos"</string>
+    <string name="summary_subtitle_paused_low_battery" msgid="7030423720574078362">"Batería baja"</string>
+    <string name="summary_subtitle_paused_photos_quota" msgid="3057279018089658614">"Se excedió la cuota de fotos"</string>
     <string name="summary_subtitle_paused_roaming" msgid="974863046888934062">"Itinerancia"</string>
-    <string name="summary_subtitle_paused_need_wifi" msgid="2264018871872109546">"esperando Wi-Fi"</string>
-    <string name="summary_subtitle_paused_need_charger" msgid="3256171133661659691">"retrasado por falta de carga"</string>
-    <string name="summary_subtitle_paused_need_network" msgid="1922651711990030201">"esperando conexión"</string>
-    <string name="summary_subtitle_paused_retry_format" msgid="3851931944505090119">"se volverá a intentar en %s"</string>
+    <string name="summary_subtitle_paused_need_wifi" msgid="2264018871872109546">"Esperando Wi-Fi"</string>
+    <string name="summary_subtitle_paused_need_charger" msgid="3256171133661659691">"Retrasado por falta de carga"</string>
+    <string name="summary_subtitle_paused_need_network" msgid="1922651711990030201">"Esperando conexión"</string>
+    <string name="summary_subtitle_paused_retry_format" msgid="3851931944505090119">"Se volverá a intentar en %s"</string>
     <string name="summary_menu_show_pending" msgid="658361192495996">"Mostrar cargas pendientes"</string>
     <string name="summary_menu_show_finished" msgid="8544099132633066086">"Mostrar las cargas completadas"</string>
     <string name="menu_view_online" msgid="6546633605818509942">"Ver en línea"</string>
@@ -44,14 +44,14 @@
     <string name="upload_state_uploading" msgid="82854465974176047">"Cargando"</string>
     <string name="upload_state_failed" msgid="3799932718800848294">"Error"</string>
     <string name="upload_state_completed" msgid="5638163990418071018">"Completado"</string>
-    <string name="pause_state_running" msgid="711411177620353982">"cargando"</string>
+    <string name="pause_state_running" msgid="711411177620353982">"Cargando"</string>
     <string name="pause_state_manually_paused" msgid="4837627990158796573">"pausado manualmente"</string>
-    <string name="pause_state_low_battery" msgid="3154677586511229063">"en pausa: batería baja"</string>
+    <string name="pause_state_low_battery" msgid="3154677586511229063">"En pausa: batería baja"</string>
     <string name="pause_state_need_charger" msgid="5014741655713255815">"en pausa: retrasado hasta que se cargue"</string>
-    <string name="pause_state_need_connectivity" msgid="338696137467815955">"en pausa: esperando conexión"</string>
+    <string name="pause_state_need_connectivity" msgid="338696137467815955">"En pausa: esperando conexión"</string>
     <string name="pause_state_need_photos_quota" msgid="4026149712680343993">"en pausa: se excedió el cupo de PWA"</string>
     <string name="pause_state_need_wifi" msgid="231858819136516913">"en pausa: esperando Wi-Fi"</string>
-    <string name="pause_state_roaming" msgid="1811348200068311099">"pausado: itinerancia"</string>
+    <string name="pause_state_roaming" msgid="1811348200068311099">"Pausado: Roaming"</string>
     <string name="pause_state_retrying" msgid="3734440128828177639">"esperando para volver a intentar"</string>
     <string name="retry_in_1min" msgid="2242454935194420914">"1 minuto"</string>
     <string name="retry_in_2min" msgid="5845688527405283031">"2 minutos"</string>
@@ -85,7 +85,7 @@
     <string name="dialog_sync_all_preparing" msgid="1666557491871126684">"Preparando <xliff:g id="PHOTOCOUNT">%1$d</xliff:g> fotos y <xliff:g id="VIDEOCOUNT">%2$d</xliff:g> videos para cargar..."</string>
     <string name="dialog_sync_all_found_none" msgid="4066988191364416995">"No es necesario cargar fotos o videos adicionales."</string>
     <string name="dialog_sync_all_server_error" msgid="2177063494820815086">"Se ha producido un problema al establecer comunicación con el servidor. Vuelve a intentarlo más tarde."</string>
-    <string name="dialog_sync_all_canceled" msgid="2595386304244274687">"Se canceló Sincronizar todo."</string>
+    <string name="dialog_sync_all_canceled" msgid="2595386304244274687">"Sincronizar todo cancelado"</string>
     <string name="dialog_sync_all_error_title" msgid="6227689508729774372">"Sincronizar todo"</string>
     <string name="manager_view_completed" msgid="5119780300858727185">"Vista completada"</string>
     <string name="manager_view_pending" msgid="4403346072556950609">"Ver cargas pendientes"</string>
@@ -104,14 +104,14 @@
     <string name="preference_title_videos_account_summary" msgid="2925385281151195648">"La cuenta de fotos se utilizará mientras se sube el video."</string>
     <string name="preference_title_videos_upload_connectivity" msgid="4029897303763182477">"Condiciones de carga"</string>
     <string name="preference_title_videos_upload_connectivity_summary" msgid="2228943790654186152">"Por ahora, se utiliza la configuración de conectividad de fotos."</string>
-    <string name="preference_mobile_data_usage_for_photos_only" msgid="8047534381344601018">"Solo fotos a través de redes para celulares"</string>
+    <string name="preference_mobile_data_usage_for_photos_only" msgid="8047534381344601018">"Solo fotos a través de redes para móviles"</string>
     <string name="preference_mobile_data_usage_for_all_media" msgid="4228623171763750182">"Fotos y videos a través de redes para celulares"</string>
     <string name="preference_mobile_data_usage_never" msgid="4887062654163669480">"Fotos y videos solo a través de Wi-Fi"</string>
     <string name="preference_category_title_about" msgid="3001183168471659844">"Acerca de"</string>
-    <string name="preference_title_camera_sync_version" msgid="1590760570503808392">"Vers. Instant Upload"</string>
+    <string name="preference_title_camera_sync_version" msgid="1590760570503808392">"Versión Instant Upload"</string>
     <string name="photos_upload_dimension_1600" msgid="2261848079760937674">"Recomendado: 1600 píxeles (para uso compartido, impresiones y protectores de pantalla)"</string>
     <string name="photos_upload_dimension_original" msgid="6807552546029109517">"Tamaño original (carga más lenta)"</string>
-    <string name="pause_state_need_media" msgid="3849758767808306320">"en pausa: tarjeta SD no disponible"</string>
+    <string name="pause_state_need_media" msgid="3849758767808306320">"En pausa: tarjeta SD no disponible"</string>
     <string name="summary_subtitle_paused_need_media" msgid="8674787576306211689">"Tarjeta SD no disponible"</string>
     <string name="preference_plus_title" msgid="8505499389432915393">"Configuración de Instant Upload"</string>
     <string name="preference_plus_enable_cs" msgid="8946492352805623630">"Instant Upload"</string>
@@ -119,7 +119,7 @@
     <string name="preference_plus_upload_status" msgid="7925576302519589779">"Estado de la carga"</string>
     <string name="preference_plus_category_advanced" msgid="1159923217131890712">"Avanzado"</string>
     <string name="preference_plus_mobile_data_connection" msgid="5368391437581896915">"Cargas por dispositivos móviles"</string>
-    <string name="preference_plus_sync_while_roaming" msgid="137428136220746649">"Cargas de itinerancia"</string>
+    <string name="preference_plus_sync_while_roaming" msgid="137428136220746649">"Cargas de roaming"</string>
     <string name="preference_plus_sync_while_roaming_summary" msgid="358436280727344717">"Cargar fotos y videos en itinerancia de red de datos"</string>
     <string name="preference_plus_delay_sync_until_charging" msgid="2327042451671101467">"Cargas de la batería"</string>
     <string name="preference_plus_delay_sync_until_charging_summary" msgid="8613924819421248445">"Subir fotos y videos solo durante la carga"</string>
