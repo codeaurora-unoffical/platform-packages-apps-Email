@@ -1,5 +1,7 @@
 /*
  * Copyright (C) 2008 The Android Open Source Project
+ * Copyright (c) 2013, The Linux Foundation. All Rights Reserved.
+ * Not a Contribution.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -80,6 +82,7 @@ import com.android.emailcommon.provider.Mailbox;
 import com.android.emailcommon.provider.QuickResponse;
 import com.android.emailcommon.utility.AttachmentUtilities;
 import com.android.emailcommon.utility.EmailAsyncTask;
+import com.android.emailcommon.utility.TextUtilities;
 import com.android.emailcommon.utility.Utility;
 import com.android.ex.chips.AccountSpecifier;
 import com.android.ex.chips.ChipsUtil;
@@ -1388,6 +1391,14 @@ public class MessageCompose extends Activity implements OnClickListener, OnFocus
                     values.put(BodyColumns.INTRO_TEXT, mDraft.mIntroText);
                     values.put(BodyColumns.SOURCE_MESSAGE_KEY, mDraft.mSourceKey);
                     Body.updateBodyWithMessageId(MessageCompose.this, mDraft.mId, values);
+                    // Update the snippet after edit the draft
+                    if (mDraft.mText != null) {
+                        ContentValues snippetValues = new ContentValues();
+                        snippetValues.put(MessageColumns.SNIPPET,
+                                TextUtilities.makeSnippetFromPlainText(mDraft.mText));
+                        getContentResolver().update(Message.CONTENT_URI, snippetValues,
+                                MessageColumns.ID + "=" + mDraft.mId, null);
+                    }
                 } else {
                     // mDraft.mId is set upon return of saveToMailbox()
                     mController.saveToMailbox(mDraft, Mailbox.TYPE_DRAFTS);
