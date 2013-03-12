@@ -1,5 +1,7 @@
 /*
  * Copyright (C) 2011 The Android Open Source Project
+ * Copyright (c) 2013, The Linux Foundation. All Rights Reserved.
+ * Not a Contribution.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -43,6 +45,7 @@ import android.widget.AdapterView;
 import android.widget.AdapterView.OnItemClickListener;
 import android.widget.ListView;
 import android.widget.SimpleCursorAdapter;
+import android.widget.Toast;
 
 /**
  * Fragment containing a list of accounts to show during shortcut creation.
@@ -401,6 +404,12 @@ public abstract class ShortcutPickerFragment extends ListFragment
             // No accounts; close the dialog
             if (data.getCount() == 0) {
                 mCallback.onMissingData(false, true);
+                // For special situation, there exists Email account on the device, but user has
+                // not synced up the Emailbox yet, so no mail data is available. Here , we add
+                // tips to user, they should sync the mailbox first, then EmailAccount widget is
+                // allowed to be added to desktop.
+                Toast.makeText(getActivity(), R.string.widget_no_mailboxes,
+                        Toast.LENGTH_SHORT).show();
                 return;
             }
             // if there is only one mailbox, auto-select it
