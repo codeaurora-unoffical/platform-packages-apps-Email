@@ -1,5 +1,7 @@
 /*
  * Copyright (C) 2010 The Android Open Source Project
+ * Copyright (c) 2013, The Linux Foundation. All rights reserved.
+ * Not a Contribution.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -176,11 +178,38 @@ public class AccountSettings extends PreferenceActivity {
         };
     }
 
+    /*
+     * Update the fragment title.
+     */
+    private void updatePreferenceTitle() {
+        Intent startIntent = getIntent();
+        if (startIntent != null) {
+            // The resources id of preferences title will wrapped in the intent with
+            // startActivity(Intent intent), get the resouce id here.
+            int initialTitle = startIntent.getIntExtra(
+                    PreferenceActivity.EXTRA_SHOW_FRAGMENT_TITLE, 0);
+            int initialShortTitle = startIntent.getIntExtra(
+                    PreferenceActivity.EXTRA_SHOW_FRAGMENT_SHORT_TITLE, 0);
+            // Make sure have the initial title.
+            if (initialTitle != 0) {
+                 CharSequence initialTitleStr = getText(initialTitle);
+                 CharSequence initialShortTitleStr = initialShortTitle != 0
+                         ? getText(initialShortTitle) : null;
+                 // This method will reset the base title of the bread crumbs for the current
+                 // preferences.
+                 showBreadCrumbs(initialTitleStr, initialShortTitleStr);
+             } else {
+                 Log.d(Logging.LOG_TAG, "Fail to get initial fragment title");
+             }
+        }
+    }
+
     @Override
     public void onResume() {
         super.onResume();
         getContentResolver().registerContentObserver(Account.NOTIFIER_URI, true, mAccountObserver);
         updateAccounts();
+        updatePreferenceTitle();
     }
 
     @Override
