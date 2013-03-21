@@ -75,6 +75,8 @@ public abstract class AccountServerBaseFragment extends Fragment
     private boolean mProceedButtonPressed;
     /*package*/ String mBaseScheme = "protocol";
 
+    private Account mAccount;
+
     /**
      * Callback interface that owning activities must provide
      */
@@ -141,6 +143,22 @@ public abstract class AccountServerBaseFragment extends Fragment
         mSettingsMode = false;
         if (getArguments() != null) {
             mSettingsMode = getArguments().getBoolean(BUNDLE_KEY_SETTINGS);
+        }
+    }
+
+    @Override
+    public void onStart() {
+        super.onStart();
+        // When we are in settings mode, if we click the add account, the
+        // SetupData will be reinitialized, it will lead to that we could not
+        // get the old account after we get back, So we should put the old
+        // account into the SetupData.
+        if (mSettingsMode) {
+            if (mAccount == null) {
+                mAccount = SetupData.getAccount();
+            } else {
+                SetupData.init(SetupData.FLOW_MODE_EDIT, mAccount);
+            }
         }
     }
 

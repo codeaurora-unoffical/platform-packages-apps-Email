@@ -150,7 +150,17 @@ public class AccountSelectorAdapter extends CursorAdapter {
             final TextView unreadCountView = (TextView) view.findViewById(R.id.unread_count);
             final View chipView = view.findViewById(R.id.color_chip);
 
-            final String displayName = getDisplayName(c);
+            // Reset the display name of combined view for locale reason.
+            // We need to translate the display name of "Combined view" in
+            // different language.
+            String displayName;
+            if (getId(c) == Account.ACCOUNT_ID_COMBINED_VIEW) {
+                displayName = mContext.getResources().getString(
+                              R.string.mailbox_list_account_selector_combined_view);
+            } else {
+                displayName = getDisplayName(c);
+            }
+
             final String emailAddress = getAccountEmailAddress(c);
 
             displayNameView.setText(displayName);
@@ -289,10 +299,9 @@ public class AccountSelectorAdapter extends CursorAdapter {
 
     private static String sCombinedViewDisplayName;
     private static String getCombinedViewDisplayName(Context c) {
-        if (sCombinedViewDisplayName == null) {
-            sCombinedViewDisplayName = c.getResources().getString(
-                    R.string.mailbox_list_account_selector_combined_view);
-        }
+        // Get the combined view display name every time for locale reason.
+        sCombinedViewDisplayName = c.getResources().getString(
+                R.string.mailbox_list_account_selector_combined_view);
         return sCombinedViewDisplayName;
     }
 
@@ -541,6 +550,14 @@ public class AccountSelectorAdapter extends CursorAdapter {
             if (mMailboxId == Mailbox.NO_MAILBOX) {
                 return;
             }
+
+            // When account != ACCOUNT_ID_COMBINED_VIEW, you open "starred" on
+            // 2-pane on non-combined view.
+            if (mMailboxId == Mailbox.QUERY_ALL_FAVORITES) {
+                setFavoriteMailboxInfo(context, mailboxId, accountId);
+                return;
+            }
+
             // Combined mailbox?
             // Unfortunately this can happen even when account != ACCOUNT_ID_COMBINED_VIEW,
             // when you open "starred" on 2-pane on non-combined view.
@@ -572,6 +589,19 @@ public class AccountSelectorAdapter extends CursorAdapter {
 
             mMailboxMessageCount = FolderProperties.getMessageCountForCombinedMailbox(
                     context, mailboxId);
+        }
+
+        /**
+         * Set current account favorite mail box information.
+         */
+        private void setFavoriteMailboxInfo(Context context, long mailboxId,
+                long accountId) {
+            Preconditions.checkState(mailboxId < -1, "Not combined mailbox");
+            mMailboxDisplayName = FolderProperties.getInstance(context)
+                    .getCombinedMailboxName(mMailboxId);
+
+            mMailboxMessageCount = FolderProperties.getFavoriteMessageCount(
+                    context, mMailboxId, accountId);
         }
 
         /**

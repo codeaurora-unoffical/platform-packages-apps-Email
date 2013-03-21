@@ -33,11 +33,12 @@ LOCAL_AAPT_FLAGS += --extra-packages com.android.ex.chips
 
 LOCAL_STATIC_JAVA_LIBRARIES := android-common com.android.emailcommon guava android-common-chips
 
+# add for the new feature
+LOCAL_JAVA_LIBRARIES := com.qrd.plugin.feature_query
+
 LOCAL_PACKAGE_NAME := Email
 
 LOCAL_PROGUARD_FLAG_FILES := proguard.flags
-
-LOCAL_SDK_VERSION := current
 
 # The Emma tool analyzes code coverage when running unit tests on the
 # application. This configuration line selects which packages will be analyzed,

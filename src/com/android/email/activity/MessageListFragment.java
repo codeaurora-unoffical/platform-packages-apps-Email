@@ -69,9 +69,11 @@ import com.android.emailcommon.provider.Mailbox;
 import com.android.emailcommon.utility.EmailAsyncTask;
 import com.android.emailcommon.utility.Utility;
 import com.google.common.annotations.VisibleForTesting;
+import com.qrd.plugin.feature_query.FeatureQuery;
 
 import java.util.HashMap;
 import java.util.Set;
+import java.util.Iterator;
 
 /**
  * Message list.
@@ -81,7 +83,8 @@ import java.util.Set;
  */
 public class MessageListFragment extends ListFragment
         implements OnItemLongClickListener, MessagesAdapter.Callback,
-        MoveMessageToDialog.Callback, OnDragListener, OnTouchListener {
+        MoveMessageToDialog.Callback, OnDragListener, OnTouchListener,
+        DeleteMessageConfirmationDialog.Callback {
     private static final String BUNDLE_LIST_STATE = "MessageListFragment.state.listState";
     private static final String BUNDLE_KEY_SELECTED_MESSAGE_ID
             = "messageListFragment.state.listState.selected_message_id";
@@ -446,6 +449,25 @@ public class MessageListFragment extends ListFragment
         adjustMessageNotification(false);
         mRefreshManager.registerListener(mRefreshListener);
         mResumed = true;
+        removeSelectedSet();
+    }
+
+    /**
+     * Remove selected messageIds
+     */
+    private void removeSelectedSet() {
+        Activity activity = getActivity();
+        if (activity != null && activity instanceof EmailActivity) {
+            Set<Long> removedMsgSet = ((EmailActivity) activity)
+                    .getRemovedMsgSet();
+            if (removedMsgSet.size() > 0 && isInSelectionMode()) {
+                Set<Long> selectedSet = mListAdapter.getSelectedSet();
+                for (Long id : removedMsgSet) {
+                    selectedSet.remove(id);
+                }
+            }
+            removedMsgSet.clear();
+        }
     }
 
     @Override
@@ -1053,6 +1075,9 @@ public class MessageListFragment extends ListFragment
      * Note we do this even if it's a push account; even on Exchange only inbox can be pushed.
      */
     private void autoRefreshStaleMailbox() {
+        //Check the status of mSyncInterval and MailboxType, if NEVER and INBOX, we do not need to refresh the mailbox.
+        if((mAccount.mSyncInterval == Mailbox.CHECK_INTERVAL_NEVER) && (Mailbox.getMailboxType(mActivity, getMailboxId()) == Mailbox.TYPE_INBOX))
+            return;
         if (!mIsRefreshable) {
             // Not refreshable (special box such as drafts, or magic boxes)
             return;
@@ -1354,6 +1379,7 @@ public class MessageListFragment extends ListFragment
             updateSearchHeader(cursor);
             autoRefreshStaleMailbox();
             updateFooterView();
+            updateSelectedSet();
             updateSelectionMode();
 
             // We want to make visible the selection only for the first load.
@@ -1427,6 +1453,28 @@ public class MessageListFragment extends ListFragment
         }
     }
 
+    private void updateSelectedSet(){
+        Iterator it = mListAdapter.getSelectedSet().iterator();
+        final Cursor c = mListAdapter.getCursor();
+        boolean isFind = false;
+        if (c == null || c.isClosed()) {
+            return;
+        }
+        while (it.hasNext()) {
+            isFind = false;
+            long setId = Long.valueOf(it.next() + "");
+            for (c.moveToFirst(); !c.isAfterLast(); c.moveToNext()) {
+                long id = c.getInt(MessagesAdapter.COLUMN_ID);
+                if (setId == id){
+                    isFind = true;
+                    break;
+                }
+            }
+            if (!isFind) {
+                it.remove();
+            }
+        }
+    }
 
     /**
      * Finish the "selection" action mode.
@@ -1489,7 +1537,7 @@ public class MessageListFragment extends ListFragment
 
         @Override
         public boolean onActionItemClicked(ActionMode mode, MenuItem item) {
-            Set<Long> selectedConversations = mListAdapter.getSelectedSet();
+            final Set<Long> selectedConversations = mListAdapter.getSelectedSet();
             if (selectedConversations.isEmpty()) return true;
             switch (item.getItemId()) {
                 case R.id.mark_read:
@@ -1507,8 +1555,16 @@ public class MessageListFragment extends ListFragment
                     toggleFavorite(selectedConversations);
                     break;
                 case R.id.delete:
-                    mCallback.onAdvancingOpAccepted(selectedConversations);
-                    deleteMessages(selectedConversations);
+                    if (FeatureQuery.FEATURE_EMAIL_DELETE_PROMPT) {
+                        DeleteMessageConfirmationDialog dialog = DeleteMessageConfirmationDialog
+                                .newInstance(selectedConversations.size(), null);
+                        dialog.setTargetFragment(MessageListFragment.this, 0);
+                        dialog.setCancelable(true);
+                        dialog.show(getFragmentManager(), "dialog");
+                    } else {
+                        mCallback.onAdvancingOpAccepted(selectedConversations);
+                        deleteMessages(selectedConversations);
+                    }
                     break;
                 case R.id.move:
                     showMoveMessagesDialog(selectedConversations);
@@ -1569,5 +1625,12 @@ public class MessageListFragment extends ListFragment
             }
             break;
         }
+    }
+
+    @Override
+    public void onDeleteMessageConfirmationDialogOkPressed() {
+        final Set<Long> selectedConversations = mListAdapter.getSelectedSet();
+        mCallback.onAdvancingOpAccepted(selectedConversations);
+        deleteMessages(selectedConversations);
     }
 }

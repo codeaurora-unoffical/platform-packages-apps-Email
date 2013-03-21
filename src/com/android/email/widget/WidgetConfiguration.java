@@ -17,8 +17,10 @@
 package com.android.email.widget;
 
 import android.app.Activity;
+import android.app.Fragment;
 import android.appwidget.AppWidgetManager;
 import android.content.Intent;
+import android.database.Cursor;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
@@ -26,9 +28,12 @@ import android.view.View.OnClickListener;
 
 import com.android.email.Email;
 import com.android.email.R;
+import com.android.email.activity.ShortcutPickerFragment;
 import com.android.email.activity.ShortcutPickerFragment.AccountShortcutPickerFragment;
 import com.android.email.activity.ShortcutPickerFragment.MailboxShortcutPickerFragment;
 import com.android.email.activity.ShortcutPickerFragment.PickerCallback;
+import com.android.email.activity.setup.AccountSetupBasics;
+import com.android.email.activity.setup.SetupData;
 import com.android.emailcommon.Logging;
 import com.android.emailcommon.provider.Account;
 import com.android.emailcommon.provider.HostAuth;
@@ -40,6 +45,8 @@ import com.android.emailcommon.utility.Utility;
 public class WidgetConfiguration extends Activity implements OnClickListener, PickerCallback {
     /** ID of the newly created application widget */
     private int mAppWidgetId;
+
+    private Account mAccount;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -71,6 +78,10 @@ public class WidgetConfiguration extends Activity implements OnClickListener, Pi
             // NOTE: do not add to history as this will be the first fragment in the flow
             AccountShortcutPickerFragment fragment = new AccountShortcutPickerFragment();
             getFragmentManager().beginTransaction().add(R.id.shortcut_list, fragment).commit();
+        } else {
+            Fragment f = getFragmentManager().findFragmentById(R.id.shortcut_list);
+            ShortcutPickerFragment picker = (ShortcutPickerFragment) f;
+            picker.reload();
         }
     }
 
@@ -85,6 +96,8 @@ public class WidgetConfiguration extends Activity implements OnClickListener, Pi
 
     @Override
     public Integer buildFilter(Account account) {
+        // Initialize account.
+        mAccount = account;
         if (!Account.isNormalAccount(account.mId)) {
             return MailboxShortcutPickerFragment.FILTER_INBOX_ONLY
                     | MailboxShortcutPickerFragment.FILTER_ALLOW_UNREAD;
@@ -106,18 +119,20 @@ public class WidgetConfiguration extends Activity implements OnClickListener, Pi
     @Override
     public void onMissingData(boolean missingAccount, boolean missingMailbox) {
         if (Email.DEBUG) {
-            Log.i(Logging.LOG_TAG, "WidgetConfiguration exited abnormally. Probably no accounts.");
+            Log.i(Logging.LOG_TAG, "WidgetConfiguration go to setup account activity. Probably no accounts.");
         }
-        int res = -1;
+        Intent i = new Intent(this, AccountSetupBasics.class);
+
+        // If there is no account, will do account configuration.
         if (missingAccount) {
-            res = R.string.widget_no_accounts;
-        } else if (missingMailbox) {
-            res = R.string.widget_no_mailboxes;
+            i.putExtra("FLOW_MODE", SetupData.FLOW_MODE_NORMAL);
         }
-        if (res > -1) {
-            Utility.showToast(this, res);
+
+        // If there is no mailbox. Maybe the mailbox does not complete the synchronization, so will wait sync mailbox.
+        if (missingMailbox) {
+            SetupData.init(SetupData.FLOW_MODE_RETURN_TO_MESSAGE_LIST, mAccount);
         }
-        finish();
+        startActivityForResult(i, mAppWidgetId);
     }
 
     private void setupWidget(Account account, long mailboxId) {
@@ -129,5 +144,35 @@ public class WidgetConfiguration extends Activity implements OnClickListener, Pi
         Intent resultValue = new Intent();
         resultValue.putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, mAppWidgetId);
         setResult(RESULT_OK, resultValue);
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        if (getAccountNum() <= 0) {
+            finish();
+            return;
+        } else {
+            Fragment f = getFragmentManager().findFragmentById(R.id.shortcut_list);
+            if (f != null) {
+                ShortcutPickerFragment picker = (ShortcutPickerFragment) f;
+                picker.reload();
+            } else {
+                AccountShortcutPickerFragment fragment = new AccountShortcutPickerFragment();
+                getFragmentManager().beginTransaction().add(R.id.shortcut_list, fragment).commit();
+            }
+        }
+    }
+
+    private int getAccountNum() {
+        Cursor c = getContentResolver().query(Account.CONTENT_URI, Account.ID_PROJECTION, null, null, null);
+        try {
+            if (c == null) return 0;
+            return c.getCount();
+        } finally {
+            if (c != null) {
+                c.close();
+                c = null;
+            }
+        }
     }
 }

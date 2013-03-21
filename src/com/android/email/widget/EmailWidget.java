@@ -188,11 +188,20 @@ public class EmailWidget implements RemoteViewsService.RemoteViewsFactory,
     public void onLoadComplete(Loader<Cursor> loader, Cursor cursor) {
         // Save away the cursor
         synchronized (sWidgetLock) {
+            int position = mCursor == null ? -1 : mCursor.getPosition();
             mCursor = (EmailWidgetLoader.WidgetCursor) cursor;
+            if (mCursor != null && position >= 0 && position < mCursor.getCount()) {
+                mCursor.moveToPosition(position);
+            }
             mAccountName = mCursor.getAccountName();
             mMailboxName = mCursor.getMailboxName();
         }
-        updateHeader();
+        Account account = Account.restoreAccountWithId(mContext, mAccountId);
+        /**
+         * If account is null means this account is abnormal.
+         * But "Combined View" should be looking as normal account.
+         */
+        updateHeader((account != null)||(Account.ACCOUNT_ID_COMBINED_VIEW == mAccountId));
         mWidgetManager.notifyAppWidgetViewDataChanged(mWidgetId, R.id.message_list);
     }
 
@@ -221,26 +230,57 @@ public class EmailWidget implements RemoteViewsService.RemoteViewsFactory,
      * @param baseUri the base uri for the command
      * @param args any arguments to the command
      */
-    private void setFillInIntent(RemoteViews views, int viewId, Uri baseUri, String messageId,
-            String mailboxId) {
-        Intent intent = null;
-        try {
-            intent = getOpenMessageIntent(mContext, Long.parseLong(messageId),
-                Long.parseLong(mailboxId));
-        } catch (NumberFormatException e) {
-            if (Logging.DEBUG_LIFECYCLE && Email.DEBUG) {
-                Log.d(TAG, "#setFillInIntent(); invalid messageId: " + messageId +
-                    " or mailboxId: " + mailboxId);
-            }
+    private void setFillInIntent(RemoteViews views, int viewId, Uri baseUri, String ... args) {
+        Intent intent = new Intent();
+        Builder builder = baseUri.buildUpon();
+        for (String arg: args) {
+            builder.appendPath(arg);
         }
+        intent.setDataAndType(builder.build(), WIDGET_DATA_MIME_TYPE);
         views.setOnClickFillInIntent(viewId, intent);
     }
 
-    private Intent getOpenMessageIntent(final Context context, final long messageId,
-            final long mailboxId) {
-        Mailbox mailbox = Mailbox.restoreMailboxWithId(context, mailboxId);
-        return Welcome.createOpenMessageIntent(context, mailbox.mAccountKey,
-                        mailboxId, messageId);
+    /**
+     * Called back by {@link com.android.email.provider.WidgetProvider.WidgetService} to
+     * handle intents created by remote views.
+     */
+    public static boolean processIntent(Context context, Intent intent) {
+        final Uri data = intent.getData();
+        if (data == null) {
+            return false;
+        }
+        List<String> pathSegments = data.getPathSegments();
+        // Our path segments are <command>, <arg1> [, <arg2>]
+        // First, a quick check of Uri validity
+        if (pathSegments.size() < 2) {
+            throw new IllegalArgumentException();
+        }
+        String command = pathSegments.get(0);
+        // Ignore unknown action names
+        try {
+            final long arg1 = Long.parseLong(pathSegments.get(1));
+            if (EmailWidget.COMMAND_NAME_VIEW_MESSAGE.equals(command)) {
+                // "view", <message id>, <mailbox id>
+                openMessage(context, Long.parseLong(pathSegments.get(2)), arg1);
+            }
+        } catch (NumberFormatException e) {
+            // Shouldn't happen as we construct all of the Uri's
+            return false;
+        }
+        return true;
+    }
+
+    private static void openMessage(final Context context, final long mailboxId,
+            final long messageId) {
+        EmailAsyncTask.runAsyncParallel(new Runnable() {
+            @Override
+            public void run() {
+                Mailbox mailbox = Mailbox.restoreMailboxWithId(context, mailboxId);
+                if (mailbox == null) return;
+                context.startActivity(Welcome.createOpenMessageIntent(context, mailbox.mAccountKey,
+                        mailboxId, messageId));
+            }
+        });
     }
 
     private void setTextViewTextAndDesc(RemoteViews views, final int id, String text) {
@@ -267,9 +307,9 @@ public class EmailWidget implements RemoteViewsService.RemoteViewsFactory,
      * Update the "header" of the widget (i.e. everything that doesn't include the scrolling
      * message list)
      */
-    private void updateHeader() {
+    private void updateHeader(boolean accountExist) {
         if (Email.DEBUG) {
-            Log.d(TAG, "#updateHeader(); widgetId: " + mWidgetId);
+            Log.d(TAG, "#updateHeader(); widgetId: " + mWidgetId + ", accountExist: " + accountExist);
         }
 
         // Get the widget layout
@@ -284,13 +324,15 @@ public class EmailWidget implements RemoteViewsService.RemoteViewsFactory,
 
         setupTitleAndCount(views);
 
-        if (isCursorValid()) {
+        if (isCursorValid() && accountExist) {
             // Show compose icon & message list
             if (mAccountId == Account.ACCOUNT_ID_COMBINED_VIEW) {
                 // Don't allow compose for "combined" view
                 views.setViewVisibility(R.id.widget_compose, View.INVISIBLE);
+                views.setViewVisibility(R.id.widget_count, View.INVISIBLE);
             } else {
                 views.setViewVisibility(R.id.widget_compose, View.VISIBLE);
+                views.setViewVisibility(R.id.widget_count, View.VISIBLE);
             }
             views.setViewVisibility(R.id.message_list, View.VISIBLE);
             views.setViewVisibility(R.id.tap_to_configure, View.GONE);
@@ -304,17 +346,24 @@ public class EmailWidget implements RemoteViewsService.RemoteViewsFactory,
         } else {
             // TODO This really should never happen ... probably can remove the else block
             // Hide compose icon & show "touch to configure" text
+            views.setViewVisibility(R.id.widget_count, View.INVISIBLE);
             views.setViewVisibility(R.id.widget_compose, View.INVISIBLE);
             views.setViewVisibility(R.id.message_list, View.GONE);
             views.setViewVisibility(R.id.tap_to_configure, View.VISIBLE);
             // Create click intent for "touch to configure" target
-            intent = Welcome.createOpenAccountInboxIntent(mContext, -1);
-            setActivityIntent(views, R.id.tap_to_configure, intent);
+            //intent = Welcome.createOpenAccountInboxIntent(mContext, -1);
+            intent = new Intent(AppWidgetManager.ACTION_APPWIDGET_CONFIGURE);
+            intent.setClass(mContext, WidgetConfiguration.class);
+            intent.putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, mWidgetId);
+            PendingIntent pendingIntent =
+                    PendingIntent.getActivity(mContext, (int) mWidgetId, intent,
+                            PendingIntent.FLAG_UPDATE_CURRENT);
+            views.setOnClickPendingIntent(R.id.tap_to_configure, pendingIntent);
         }
 
         // Use a bare intent for our template; we need to fill everything in
-        intent = new Intent(mContext, Welcome.class);
-        PendingIntent pendingIntent = PendingIntent.getActivity(mContext, 0, intent,
+        intent = new Intent(mContext, WidgetService.class);
+        PendingIntent pendingIntent = PendingIntent.getService(mContext, 0, intent,
                 PendingIntent.FLAG_UPDATE_CURRENT);
         views.setPendingIntentTemplate(R.id.message_list, pendingIntent);
 

@@ -325,6 +325,11 @@ public class AccountSetupBasics extends AccountSetupActivity
     @Override
     public void onResume() {
         super.onResume();
+        // if keep this activity and press HOME_KEY. checkBox's text doesn't
+        // refresh if user change the language.
+        if (mDefaultView != null) {
+            mDefaultView.setText(R.string.account_setup_basics_default_label);
+        }
         mPaused = false;
     }
 
@@ -657,7 +662,12 @@ public class AccountSetupBasics extends AccountSetupActivity
         if (result == AccountCheckSettingsFragment.CHECK_SETTINGS_OK) {
             AccountSetupOptions.actionOptions(this);
             mReportAccountAuthenticatorError = false;
-            finish();
+            /**
+             * Needn't finish this activity.
+             * If user go to AccountSetupOptions activity and press the back key or "previous" button,
+             * should go back to this activity.
+             */
+            //finish();
         }
     }
 
@@ -683,6 +693,10 @@ public class AccountSetupBasics extends AccountSetupActivity
 
         @Override
         protected void onPostExecute(Integer numAccounts) {
+            // Exit immediately if the user left before we finished
+            if (mPaused) {
+               return;
+            }
             if (numAccounts > 0) {
                 Activity a = AccountSetupBasics.this;
                 UiUtilities.setVisibilitySafe(mDefaultView, View.VISIBLE);

@@ -143,6 +143,19 @@
             <!--
                 content area - only one of them is visible at a time.
             -->
+           	<TextView
+                android:id="@+id/clip_message"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginLeft="16dip"
+                android:layout_marginRight="16dip"
+                android:textColor="@android:color/holo_blue_light"
+                android:textSize="14dp"
+                android:textStyle="bold"
+                android:clickable="true"
+                android:text="@string/clip_message"
+                android:visibility="gone"/>
+                
             <com.android.email.view.RigidWebView
                 android:id="@+id/message_content"
                 android:layout_width="match_parent"

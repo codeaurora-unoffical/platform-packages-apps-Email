@@ -16,6 +16,8 @@
 
 package com.android.email.provider;
 
+import android.accounts.AccountManager;
+import android.accounts.OnAccountsUpdateListener;
 import android.content.ContentProvider;
 import android.content.ContentProviderOperation;
 import android.content.ContentProviderResult;
@@ -32,6 +34,7 @@ import android.database.MatrixCursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteException;
 import android.net.Uri;
+import android.os.Handler;
 import android.text.TextUtils;
 import android.util.Log;
 
@@ -39,6 +42,7 @@ import com.android.email.Email;
 import com.android.email.Preferences;
 import com.android.email.provider.ContentCache.CacheToken;
 import com.android.email.service.AttachmentDownloadService;
+import com.android.emailcommon.AccountManagerTypes;
 import com.android.emailcommon.Logging;
 import com.android.emailcommon.provider.Account;
 import com.android.emailcommon.provider.EmailContent;
@@ -69,7 +73,7 @@ import java.util.Map;
  * @author mblank
  *
  */
-public class EmailProvider extends ContentProvider {
+public class EmailProvider extends ContentProvider implements OnAccountsUpdateListener {
 
     private static final String TAG = "EmailProvider";
 
@@ -1026,6 +1030,7 @@ public class EmailProvider extends ContentProvider {
     public boolean onCreate() {
         Email.setServicesEnabledAsync(getContext());
         checkDatabases();
+        AccountManager.get(getContext()).addOnAccountsUpdatedListener(this, null, false);
         return false;
     }
 
@@ -1807,5 +1812,59 @@ outer:
         String mailboxId = uri.getLastPathSegment();
         return db.rawQuery("select max(_id) from Message where mailboxKey=?",
                 new String[] {mailboxId});
-   }
+    }
+
+    @Override
+    public void onAccountsUpdated(android.accounts.Account[] accounts) {
+        Context context = getContext();
+        android.accounts.Account[] exchangeAccounts = AccountManager.get(context)
+                .getAccountsByType(AccountManagerTypes.TYPE_EXCHANGE);
+        ArrayList<String> needDeletes = new ArrayList<String>();
+        ArrayList<String> existAccounts = new ArrayList<String>();
+
+        // get exist exchange account
+        for (android.accounts.Account account : exchangeAccounts) {
+            existAccounts.add(account.name);
+        }
+
+        // get need delete account
+        Cursor c = query(Account.CONTENT_URI, Account.CONTENT_PROJECTION, null, null, null);
+        try {
+            if (c == null) return;
+            while (c.moveToNext()) {
+                long id = c.getLong(Account.CONTENT_ID_COLUMN);
+                String emailAddress = c.getString(Account.CONTENT_EMAIL_ADDRESS_COLUMN);
+                HostAuth hostAuthRecv = HostAuth.restoreHostAuthWithId(context,
+                        c.getLong(Account.CONTENT_HOST_AUTH_KEY_RECV_COLUMN));
+                HostAuth hostAuthSend = HostAuth.restoreHostAuthWithId(context,
+                        c.getLong(Account.CONTENT_HOST_AUTH_KEY_SEND_COLUMN));
+                if (hostAuthRecv.isEasConnection()
+                        && hostAuthSend.isEasConnection()
+                        && !existAccounts.contains(emailAddress)) {
+                    needDeletes.add(String.valueOf(id));
+                }
+            }
+        } finally {
+            if (c != null) {
+                c.close();
+                c = null;
+            }
+        }
+
+        // delete the accounts.
+        StringBuilder where = new StringBuilder();
+        where.append(AccountColumns.ID + " IN (");
+        for (int i = 0; i < needDeletes.size(); i++) {
+            if (i != 0) {
+                where.append(",");
+            }
+            where.append(needDeletes.get(i));
+        }
+        where.append(")");
+        int res = delete(Account.CONTENT_URI, where.toString(), null);
+        if (Email.DEBUG) {
+            Log.d(TAG, "AccountsUpdated, delete " + res + " exchange account.");
+        }
+    }
+
 }

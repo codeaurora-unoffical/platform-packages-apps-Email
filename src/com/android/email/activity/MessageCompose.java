@@ -20,18 +20,29 @@ import android.app.ActionBar;
 import android.app.ActionBar.OnNavigationListener;
 import android.app.Activity;
 import android.app.ActivityManager;
+import android.app.Dialog;
+import android.app.DialogFragment;
 import android.app.FragmentTransaction;
+import android.app.ProgressDialog;
 import android.content.ActivityNotFoundException;
 import android.content.ContentResolver;
 import android.content.ContentUris;
 import android.content.ContentValues;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.res.AssetFileDescriptor;
+import android.content.res.Configuration;
 import android.database.Cursor;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
+import android.net.NetworkInfo.State;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.Handler;
 import android.os.Parcelable;
 import android.provider.OpenableColumns;
+import android.provider.ContactsContract.Contacts;
 import android.text.InputFilter;
 import android.text.SpannableStringBuilder;
 import android.text.Spanned;
@@ -49,6 +60,7 @@ import android.webkit.WebView;
 import android.widget.ArrayAdapter;
 import android.widget.CheckBox;
 import android.widget.EditText;
+import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.MultiAutoCompleteTextView;
 import android.widget.TextView;
@@ -78,6 +90,7 @@ import com.android.emailcommon.provider.Mailbox;
 import com.android.emailcommon.provider.QuickResponse;
 import com.android.emailcommon.utility.AttachmentUtilities;
 import com.android.emailcommon.utility.EmailAsyncTask;
+import com.android.emailcommon.utility.TextUtilities;
 import com.android.emailcommon.utility.Utility;
 import com.android.ex.chips.AccountSpecifier;
 import com.android.ex.chips.ChipsUtil;
@@ -85,14 +98,19 @@ import com.android.ex.chips.RecipientEditTextView;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Objects;
 import com.google.common.collect.Lists;
+import com.qrd.plugin.feature_query.FeatureQuery;
 
 import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 
@@ -110,7 +128,10 @@ public class MessageCompose extends Activity implements OnClickListener, OnFocus
     private static final String ACTION_REPLY = "com.android.email.intent.action.REPLY";
     private static final String ACTION_REPLY_ALL = "com.android.email.intent.action.REPLY_ALL";
     private static final String ACTION_FORWARD = "com.android.email.intent.action.FORWARD";
+    private static final String ACTION_FORWARD_PARTLY = "com.android.email.intent.action.FORWARD.PARTLY";
     private static final String ACTION_EDIT_DRAFT = "com.android.email.intent.action.EDIT_DRAFT";
+    // add for new feature: pick contacts
+    private static final String ACTION_MULTI_PICK_EMAIL = "com.android.contacts.action.MULTI_PICK_EMAIL";
 
     private static final String EXTRA_ACCOUNT_ID = "account_id";
     private static final String EXTRA_MESSAGE_ID = "message_id";
@@ -118,7 +139,8 @@ public class MessageCompose extends Activity implements OnClickListener, OnFocus
     public static final String EXTRA_FROM_WITHIN_APP = "from_within_app";
     /** If the intent is sent from thw widget. */
     public static final String EXTRA_FROM_WIDGET = "from_widget";
-
+    /** Be used to saving current mQuickResponsesAvailable value.*/
+    private static final String STATE_QUICK_RESPONSES_AVAILABLE = "quick_responses_available";
     private static final String STATE_KEY_CC_SHOWN =
         "com.android.email.activity.MessageCompose.ccShown";
     private static final String STATE_KEY_QUOTED_TEXT_SHOWN =
@@ -129,13 +151,28 @@ public class MessageCompose extends Activity implements OnClickListener, OnFocus
         "com.android.email.activity.MessageCompose.requestId";
     private static final String STATE_KEY_ACTION =
         "com.android.email.activity.MessageCompose.action";
+    // current email state, whether is empty
+    public static final String STATE_KEY_IS_EMPTY =
+        "com.android.email.activity.MessageCompose.isEmpty";
 
     private static final int ACTIVITY_REQUEST_PICK_ATTACHMENT = 1;
+    // add for new feature: pick contacts
+    private static final int ACTIVITY_REQUEST_PICK_CONTACT_TO = 2;
+    private static final int ACTIVITY_REQUEST_PICK_CONTACT_CC = 3;
+    private static final int ACTIVITY_REQUEST_PICK_CONTACT_BCC = 4;
 
     private static final String[] ATTACHMENT_META_SIZE_PROJECTION = {
         OpenableColumns.SIZE
     };
     private static final int ATTACHMENT_META_SIZE_COLUMN_SIZE = 0;
+
+    // add for new feature: pick contacts
+    private static final int EMAIL_NAME_INDEX = 0;
+    private static final int EMAIL_ADDRESS_INDEX = 1;
+    private static final String EMAIL_DOUBLE_QUOTATION = "\"";
+    private static final String EMAIL_QUOTE_START = "<";
+    private static final String EMAIL_QUOTE_END = ">";
+    private static final String EMAIL_SPACE = " ";
 
     /**
      * A registry of the active tasks used to save messages.
@@ -200,6 +237,12 @@ public class MessageCompose extends Activity implements OnClickListener, OnFocus
     private boolean mMessageLoaded;
     private boolean mInitiallyEmpty;
     private boolean mPickingAttachment = false;
+
+    /**
+     * Adding a flag to indicate whether current state is picking contact.
+     * "false" means not picking contact. "true" means picking contact.
+     */
+    private boolean mPickingContact = false;
     private Boolean mQuickResponsesAvailable = true;
     private final EmailAsyncTask.Tracker mTaskTracker = new EmailAsyncTask.Tracker();
 
@@ -223,6 +266,37 @@ public class MessageCompose extends Activity implements OnClickListener, OnFocus
 
         @Override
         public void afterTextChanged(android.text.Editable s) { }
+    };
+
+    private MyProgressDialog mProgressDialog = null;
+
+    private final static int MSG_UPDATE_ATTACHMENT_UI_START = 0;
+    private final static int MSG_UPDATE_ATTACHMENT_UI_FINISH = 1;
+    private final static int MSG_UPDATE_ATTACHMENT_UI_CANCEL = 2;
+    private final static int MSG_UPDATE_ATTACHMENT_UI_ERROR = 3;
+
+    private Handler mUpdateAttachmentUiHandler = new Handler() {
+        @Override
+        public void handleMessage(android.os.Message msg) {
+            if (msg.what == MSG_UPDATE_ATTACHMENT_UI_ERROR) {
+                Toast.makeText(MessageCompose.this, msg.arg1, Toast.LENGTH_LONG).show();
+                return;
+            }
+
+            // If the mProgressDialog is null or it has not been attached to
+            // current activity, return immediately.
+            if (mProgressDialog == null || mProgressDialog.getFragmentManager() == null) {
+                return;
+            }
+            if (msg.what == MSG_UPDATE_ATTACHMENT_UI_START) {
+                mProgressDialog.show(getFragmentManager(), "dialog");
+            } else if (msg.what == MSG_UPDATE_ATTACHMENT_UI_FINISH) {
+                updateAttachmentUi();
+                mProgressDialog.dismiss();
+            } else if (msg.what == MSG_UPDATE_ATTACHMENT_UI_CANCEL) {
+                mProgressDialog.dismiss();
+            }
+        }
     };
 
     private static Intent getBaseIntent(Context context) {
@@ -314,6 +388,15 @@ public class MessageCompose extends Activity implements OnClickListener, OnFocus
     }
 
     /**
+     * Compose a new message as a forward of the given message. And remove the uncompleted attachment.
+     * @param context
+     * @param messageId
+     */
+    public static void actionForwardPartly(Context context, long messageId) {
+        startActivityWithMessage(context, ACTION_FORWARD_PARTLY, messageId);
+    }
+
+    /**
      * Continue composition of the given message. This action modifies the way this Activity
      * handles certain actions.
      * Save will attempt to replace the message in the given folder with the updated version.
@@ -371,7 +454,10 @@ public class MessageCompose extends Activity implements OnClickListener, OnFocus
 
     private void setAccount(Account account) {
         if (account == null) {
-            throw new IllegalArgumentException();
+            // throw new IllegalArgumentException();
+            Utility.showToast(this, R.string.toast_account_not_found);
+            finish();
+            return;
         }
         mAccount = account;
         mFromView.setText(account.mEmailAddress);
@@ -399,6 +485,7 @@ public class MessageCompose extends Activity implements OnClickListener, OnFocus
                 ActionBar.DISPLAY_HOME_AS_UP, ActionBar.DISPLAY_HOME_AS_UP);
 
         if (savedInstanceState != null) {
+            mQuickResponsesAvailable = savedInstanceState.getBoolean(STATE_QUICK_RESPONSES_AVAILABLE);
             long draftId = savedInstanceState.getLong(STATE_KEY_DRAFT_ID, Message.NOT_SAVED);
             long existingSaveTaskId = savedInstanceState.getLong(STATE_KEY_LAST_SAVE_TASK_ID, -1);
             setAction(savedInstanceState.getString(STATE_KEY_ACTION));
@@ -420,6 +507,11 @@ public class MessageCompose extends Activity implements OnClickListener, OnFocus
         }
     }
 
+    @Override
+    public void onConfigurationChanged(Configuration newConfig) {
+        super.onConfigurationChanged(newConfig);
+    }
+
     private void resolveIntent(Intent intent) {
         if (Intent.ACTION_VIEW.equals(mAction)
                 || Intent.ACTION_SENDTO.equals(mAction)
@@ -432,8 +524,10 @@ public class MessageCompose extends Activity implements OnClickListener, OnFocus
                 || ACTION_REPLY_ALL.equals(mAction)
                 || ACTION_FORWARD.equals(mAction)) {
             long sourceMessageId = getIntent().getLongExtra(EXTRA_MESSAGE_ID, Message.NOT_SAVED);
-            loadSourceMessage(sourceMessageId, true);
-
+            loadSourceMessage(sourceMessageId, true, true);
+        } else if (ACTION_FORWARD_PARTLY.equals(mAction)) {
+            long sourceMessageId = getIntent().getLongExtra(EXTRA_MESSAGE_ID, Message.NOT_SAVED);
+            loadSourceMessage(sourceMessageId, true, false);
         } else if (ACTION_EDIT_DRAFT.equals(mAction)) {
             // Assert getIntent.hasExtra(EXTRA_MESSAGE_ID)
             long draftId = getIntent().getLongExtra(EXTRA_MESSAGE_ID, Message.NOT_SAVED);
@@ -452,6 +546,8 @@ public class MessageCompose extends Activity implements OnClickListener, OnFocus
         // Temporarily disable onTextChanged listeners while restoring the fields
         removeListeners();
         super.onRestoreInstanceState(savedInstanceState);
+        // Init current email state of whether empty from last one.
+        mInitiallyEmpty = savedInstanceState.getBoolean(STATE_KEY_IS_EMPTY);
         if (savedInstanceState.getBoolean(STATE_KEY_CC_SHOWN)) {
             showCcBccFields();
         }
@@ -553,6 +649,24 @@ public class MessageCompose extends Activity implements OnClickListener, OnFocus
      */
     @Override
     protected void onSaveInstanceState(Bundle outState) {
+        // If user switches orientation very quickly, this activity will
+        // recreates during orientation changes, cause resumeDraft() be called in
+        // onCreate(), and eventually run the AddAttachmentThread thread. This
+        // thread will first show the mProgressDialog and then dismiss it when
+        // it finishes it's job. When this activity recreates,
+        // onSaveInstanceState will be called. There will be a situation that,
+        // after this method has been called, AddAttachmentThread starts to run
+        // and tried to show mProgressDialog, an IllegalStateException will be
+        // thrown at this time. So to avoid this exception, we remove the
+        // pending message in the mUpdateAttachmentUiHandler that will show the
+        // mProgressDialog at a later time
+        if (mUpdateAttachmentUiHandler.hasMessages(MSG_UPDATE_ATTACHMENT_UI_START)) {
+            mUpdateAttachmentUiHandler.removeMessages(MSG_UPDATE_ATTACHMENT_UI_START);
+        }
+        if (mProgressDialog != null && mProgressDialog.getDialog() != null) {
+            mProgressDialog.dismiss();
+        }
+
         super.onSaveInstanceState(outState);
 
         long draftId = mDraft.mId;
@@ -563,10 +677,12 @@ public class MessageCompose extends Activity implements OnClickListener, OnFocus
         outState.putBoolean(STATE_KEY_QUOTED_TEXT_SHOWN,
                 mQuotedTextArea.getVisibility() == View.VISIBLE);
         outState.putString(STATE_KEY_ACTION, mAction);
-
+        outState.putBoolean(STATE_QUICK_RESPONSES_AVAILABLE, mQuickResponsesAvailable);
         // If there are any outstanding save requests, ensure that it's noted in case it hasn't
         // finished by the time the activity is restored.
         outState.putLong(STATE_KEY_LAST_SAVE_TASK_ID, mLastSaveTaskId);
+        // Save current email state, whether is empty.
+        outState.putBoolean(STATE_KEY_IS_EMPTY, areViewsEmpty());
     }
 
     @Override
@@ -608,7 +724,10 @@ public class MessageCompose extends Activity implements OnClickListener, OnFocus
     }
 
     private void setMessageChanged(boolean messageChanged) {
-        boolean needsSaving = messageChanged && !(mInitiallyEmpty && areViewsEmpty());
+        // If the message has been saved, that whether or not all text fields
+        // are empty should not be as the basis for whether need to save.
+        boolean needsSaving = messageChanged
+                && !(mInitiallyEmpty && (!mDraft.isSaved() && areViewsEmpty()));
 
         if (mDraftNeedsSaving != needsSaving) {
             mDraftNeedsSaving = needsSaving;
@@ -715,6 +834,26 @@ public class MessageCompose extends Activity implements OnClickListener, OnFocus
             mBccView = UiUtilities.getView(this, R.id.bcc);
         }
 
+        ImageButton toPicker = (ImageButton) UiUtilities.getViewOrNull(this,
+                R.id.to_recipients_picker);
+        ImageButton ccPicker = (ImageButton) UiUtilities.getViewOrNull(this,
+                R.id.cc_recipients_picker);
+        ImageButton bccPicker = (ImageButton) UiUtilities.getViewOrNull(this,
+                R.id.bcc_recipients_picker);
+        if (FeatureQuery.FEATURE_EMAIL_MULTIPICK_CONTACTS
+                && toPicker != null && ccPicker != null && bccPicker != null) {
+            toPicker.setVisibility(View.VISIBLE);
+            toPicker.setOnClickListener(this);
+            ccPicker.setVisibility(View.VISIBLE);
+            ccPicker.setOnClickListener(this);
+            bccPicker.setVisibility(View.VISIBLE);
+            bccPicker.setOnClickListener(this);
+        } else if (toPicker != null && ccPicker != null && bccPicker != null) {
+            toPicker.setVisibility(View.GONE);
+            ccPicker.setVisibility(View.GONE);
+            bccPicker.setVisibility(View.GONE);
+        }
+
         mFromView = UiUtilities.getView(this, R.id.from);
         mCcBccContainer = UiUtilities.getView(this, R.id.cc_bcc_wrapper);
         mSubjectView = UiUtilities.getView(this, R.id.subject);
@@ -731,6 +870,11 @@ public class MessageCompose extends Activity implements OnClickListener, OnFocus
         mToView.setFilters(recipientFilters);
         mCcView.setFilters(recipientFilters);
         mBccView.setFilters(recipientFilters);
+
+        // pop-up the list after a single char is typed
+        mToView.setThreshold(1);
+        mCcView.setThreshold(1);
+        mBccView.setThreshold(1);
 
         /*
          * We set this to invisible by default. Other methods will turn it back on if it's
@@ -860,16 +1004,17 @@ public class MessageCompose extends Activity implements OnClickListener, OnFocus
                 loadAttachments(message.mId, mAccount, new AttachmentLoadedCallback() {
                     @Override
                     public void onAttachmentLoaded(Attachment[] attachments) {
-                        for (Attachment attachment: attachments) {
-                            addAttachment(attachment);
-                        }
+                        final AddAttachmentThread thread = new AddAttachmentThread();
+                        mProgressDialog = MyProgressDialog.newInstance(R.string.loading_attachments, thread);
+                        thread.setAttachments(attachments);
+                        thread.start();
                     }
                 });
 
                 // If we're resuming an edit of a reply, reply-all, or forward, re-load the
                 // source message if available so that we get more information.
                 if (message.mSourceKey != Message.NOT_SAVED) {
-                    loadSourceMessage(message.mSourceKey, false /* restore views */);
+                    loadSourceMessage(message.mSourceKey, false /* restore views */, true);
                 }
             }
 
@@ -912,7 +1057,7 @@ public class MessageCompose extends Activity implements OnClickListener, OnFocus
      * Asynchronously loads a source message (to be replied or forwarded in this current view),
      * populating text fields and quoted text fields when the load finishes, if requested.
      */
-    private void loadSourceMessage(long sourceMessageId, final boolean restoreViews) {
+    private void loadSourceMessage(long sourceMessageId, final boolean restoreViews, final boolean smartForward) {
         new LoadMessageTask(sourceMessageId, null, new OnMessageLoadHandler() {
             @Override
             public void onMessageLoaded(Message message, Body body) {
@@ -929,6 +1074,15 @@ public class MessageCompose extends Activity implements OnClickListener, OnFocus
                     setInitialComposeText(null, getAccountSignature(mAccount));
                 }
 
+                /**
+                * The "Forward Email" should have "Save as Draft" option when load content
+                * from original email. This logic should be the same as "replay" and "replayall"
+                * to user.
+                */
+                if (isForward()) {
+                    setMessageChanged(true);
+                }
+
                 loadAttachments(message.mId, mAccount, new AttachmentLoadedCallback() {
                     @Override
                     public void onAttachmentLoaded(Attachment[] attachments) {
@@ -940,6 +1094,7 @@ public class MessageCompose extends Activity implements OnClickListener, OnFocus
                             if (supportsSmartForward) {
                                 attachment.mFlags |= Attachment.FLAG_SMART_FORWARD;
                             }
+                            if (!smartForward && TextUtils.isEmpty(attachment.mContentUri)) continue;
                             mSourceAttachments.add(attachment);
                         }
                         if (isForward() && restoreViews) {
@@ -1181,7 +1336,10 @@ public class MessageCompose extends Activity implements OnClickListener, OnFocus
     }
 
     private static void addAddress(MultiAutoCompleteTextView view, String address) {
-        view.append(address + ", ");
+
+        if (!TextUtils.isEmpty(address)) {
+            view.append(address + ", ");
+         }
     }
 
     private static String getPackedAddresses(TextView view) {
@@ -1342,6 +1500,15 @@ public class MessageCompose extends Activity implements OnClickListener, OnFocus
                     values.put(BodyColumns.INTRO_TEXT, mDraft.mIntroText);
                     values.put(BodyColumns.SOURCE_MESSAGE_KEY, mDraft.mSourceKey);
                     Body.updateBodyWithMessageId(MessageCompose.this, mDraft.mId, values);
+                    // After edit the draft again, we should update the snippet
+                    // if the text is not null. Otherwise, the old snippet will
+                    // show in the draft box if the mText change to "";
+                    if (mDraft.mText != null) {
+                        // update the snippet.
+                        ContentValues snippetValues = new ContentValues();
+                        snippetValues.put(MessageColumns.SNIPPET, TextUtilities.makeSnippetFromPlainText(mDraft.mText));
+                        getContentResolver().update(Message.CONTENT_URI, snippetValues, MessageColumns.ID + "=" + mDraft.mId, null);
+                    }
                 } else {
                     // mDraft.mId is set upon return of saveToMailbox()
                     mController.saveToMailbox(mDraft, Mailbox.TYPE_DRAFTS);
@@ -1400,7 +1567,7 @@ public class MessageCompose extends Activity implements OnClickListener, OnFocus
 
         private boolean shouldShowSaveToast() {
             // Don't show the toast when rotating, or when opening an Activity on top of this one.
-            return !isChangingConfigurations() && !mPickingAttachment;
+            return !isChangingConfigurations() && !mPickingAttachment && !mPickingContact;
         }
 
         @Override
@@ -1440,7 +1607,8 @@ public class MessageCompose extends Activity implements OnClickListener, OnFocus
    }
 
     private void saveIfNeeded() {
-        if (!mDraftNeedsSaving) {
+        // If we leave this activity for picking attachment, we needn't save the draft.
+        if (!mDraftNeedsSaving || mPickingAttachment) {
             return;
         }
         setMessageChanged(false);
@@ -1478,6 +1646,13 @@ public class MessageCompose extends Activity implements OnClickListener, OnFocus
             Toast.makeText(this, getString(R.string.message_compose_error_no_recipients),
                     Toast.LENGTH_LONG).show();
         } else {
+            ConnectivityManager cm = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+            NetworkInfo networkInfo = cm.getActiveNetworkInfo();
+            if (networkInfo == null
+                    || (networkInfo != null && networkInfo.getState() == State.DISCONNECTED)) {
+                Toast.makeText(this, getString(R.string.send_mail_fail_network_disconnect),
+                        Toast.LENGTH_LONG).show();
+            }
             sendOrSaveMessage(true);
             setMessageChanged(false);
             finish();
@@ -1555,7 +1730,11 @@ public class MessageCompose extends Activity implements OnClickListener, OnFocus
         Intent i = new Intent(Intent.ACTION_GET_CONTENT);
         i.addCategory(Intent.CATEGORY_OPENABLE);
         i.addFlags(Intent.FLAG_ACTIVITY_CLEAR_WHEN_TASK_RESET);
-        i.setType(AttachmentUtilities.ACCEPTABLE_ATTACHMENT_SEND_UI_TYPES[0]);
+        if (FeatureQuery.FEATURE_EMAIL_ATTACH_FILE) {
+            i.setType(AttachmentUtilities.ACCEPTABLE_ATTACHMENT_SEND_INTENT_TYPES[0]);
+        } else {
+            i.setType(AttachmentUtilities.ACCEPTABLE_ATTACHMENT_SEND_UI_TYPES[0]);
+        }
         mPickingAttachment = true;
         startActivityForResult(
                 Intent.createChooser(i, getString(R.string.choose_attachment_dialog_title)),
@@ -1563,6 +1742,16 @@ public class MessageCompose extends Activity implements OnClickListener, OnFocus
     }
 
     private Attachment loadAttachmentInfo(Uri uri) {
+        String scheme = uri.getScheme();
+        if (scheme != null && !scheme.equals("content") && !scheme.equals("file")) {
+            Log.w(Logging.LOG_TAG, "The uri isn't start with 'content' or 'file', didn't support this attachment. The uri is: " + uri.toString());
+            android.os.Message msg = new android.os.Message();
+            msg.what = MSG_UPDATE_ATTACHMENT_UI_ERROR;
+            msg.arg1 = R.string.attachment_not_support;
+            mUpdateAttachmentUiHandler.sendMessage(msg);
+            return null;
+        }
+
         long size = -1;
         ContentResolver contentResolver = getContentResolver();
 
@@ -1575,6 +1764,20 @@ public class MessageCompose extends Activity implements OnClickListener, OnFocus
             try {
                 if (metadataCursor.moveToFirst()) {
                     size = metadataCursor.getLong(ATTACHMENT_META_SIZE_COLUMN_SIZE);
+                    if (size == 0) {
+                        // try to adjust the attachment size.
+                        try {
+                            AssetFileDescriptor fd = contentResolver.openAssetFileDescriptor(uri, "r"); // "r" for read only
+                            if (fd != null) {
+                                size = fd.getDeclaredLength();
+                                fd.close();
+                            }
+                        } catch (FileNotFoundException e) {
+                            Log.w(Logging.LOG_TAG, "catch the FileNotFoundException.");
+                        } catch (IOException ex) {
+                            Log.w(Logging.LOG_TAG, "catch the IOException.");
+                        }
+                    }
                 }
             } finally {
                 metadataCursor.close();
@@ -1591,13 +1794,9 @@ public class MessageCompose extends Activity implements OnClickListener, OnFocus
                     size = file.length();  // Returns 0 for file not found
                 }
             }
-
-            if (size <= 0) {
-                // The size was not measurable;  This attachment is not safe to use.
-                // Quick hack to force a relevant error into the UI
-                // TODO: A proper announcement of the problem
-                size = AttachmentUtilities.MAX_ATTACHMENT_UPLOAD_SIZE + 1;
-            }
+            // We needn't to handle the case for size <= 0 at here, and we will make it
+            // could add the attachment even if the size is zero, and we will prompt a
+            // toast to tell the user the attachment's size is less than zero.
         }
 
         Attachment attachment = new Attachment();
@@ -1608,16 +1807,30 @@ public class MessageCompose extends Activity implements OnClickListener, OnFocus
         return attachment;
     }
 
-    private void addAttachment(Attachment attachment) {
+    private void addAttachment(Attachment attachment, boolean updateAttachmentUi) {
+        // The attachment maybe null, caused by the uri's scheme is not start with 'content' or 'file'.
+        // So if the attachment is null, do nothing.
+        if (attachment == null) return;
+
         // Before attaching the attachment, make sure it meets any other pre-attach criteria
-        if (attachment.mSize > AttachmentUtilities.MAX_ATTACHMENT_UPLOAD_SIZE) {
-            Toast.makeText(this, R.string.message_compose_attachment_size, Toast.LENGTH_LONG)
-                    .show();
+        if (attachment.mSize < 0) {
+            android.os.Message msg = new android.os.Message();
+            msg.what = MSG_UPDATE_ATTACHMENT_UI_ERROR;
+            msg.arg1 = R.string.attachment_size_less_than_zero;
+            mUpdateAttachmentUiHandler.sendMessage(msg);
+            return;
+        } else if (attachment.mSize > AttachmentUtilities.MAX_ATTACHMENT_UPLOAD_SIZE) {
+            android.os.Message msg = new android.os.Message();
+            msg.what = MSG_UPDATE_ATTACHMENT_UI_ERROR;
+            msg.arg1 = R.string.message_compose_attachment_size;
+            mUpdateAttachmentUiHandler.sendMessage(msg);
             return;
         }
 
         mAttachments.add(attachment);
-        updateAttachmentUi();
+        if (updateAttachmentUi) {
+            updateAttachmentUi();
+        }
     }
 
     private void updateAttachmentUi() {
@@ -1663,7 +1876,7 @@ public class MessageCompose extends Activity implements OnClickListener, OnFocus
     }
 
     private void addAttachmentFromUri(Uri uri) {
-        addAttachment(loadAttachmentInfo(uri));
+        addAttachment(loadAttachmentInfo(uri), true);
     }
 
     /**
@@ -1672,21 +1885,67 @@ public class MessageCompose extends Activity implements OnClickListener, OnFocus
      */
     private void addAttachmentFromSendIntent(Uri uri) {
         final Attachment attachment = loadAttachmentInfo(uri);
+        // The attachment maybe null, caused by the uri's scheme is not start with 'content' or 'file'.
+        // So if the attachment is null, do nothing.
+        if (attachment == null) return;
+
         final String mimeType = attachment.mMimeType;
         if (!TextUtils.isEmpty(mimeType) && MimeUtility.mimeTypeMatches(mimeType,
                 AttachmentUtilities.ACCEPTABLE_ATTACHMENT_SEND_INTENT_TYPES)) {
-            addAttachment(attachment);
+            addAttachment(attachment, true);
+        }
+    }
+
+    private void addAddressFromData(MultiAutoCompleteTextView view, Intent data) {
+        Bundle b = data.getExtras();
+        Bundle choiceSet = b.getBundle("result");
+        Set<String> set = choiceSet.keySet();
+        Iterator<String> i = set.iterator();
+        while (i.hasNext()) {
+            String key = i.next();
+            String[] emails = choiceSet.getStringArray(key);
+            StringBuffer strEmail = new StringBuffer();
+            // format as: "name" <address@xxx>
+            strEmail.append(EMAIL_DOUBLE_QUOTATION)         // '"'
+                .append(emails[EMAIL_NAME_INDEX])           // name
+                .append(EMAIL_DOUBLE_QUOTATION)             // '"'
+                .append(EMAIL_SPACE)                        // ' '
+                .append(EMAIL_QUOTE_START)                  // '<'
+                .append(emails[EMAIL_ADDRESS_INDEX])        // address
+                .append(EMAIL_QUOTE_END);                   // '>'
+
+            addAddress(view, strEmail.toString());
         }
     }
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         mPickingAttachment = false;
+        mPickingContact = false;
+
         if (data == null) {
             return;
         }
-        addAttachmentFromUri(data.getData());
-        setMessageChanged(true);
+        MultiAutoCompleteTextView tv = null;
+        switch (requestCode) {
+            case ACTIVITY_REQUEST_PICK_CONTACT_TO:
+                tv = mToView;
+                tv.setError(null);
+                break;
+            case ACTIVITY_REQUEST_PICK_CONTACT_CC:
+                tv = mCcView;
+                break;
+            case ACTIVITY_REQUEST_PICK_CONTACT_BCC:
+                tv = mBccView;
+                break;
+            case ACTIVITY_REQUEST_PICK_ATTACHMENT:
+                addAttachmentFromUri(data.getData());
+                setMessageChanged(true);
+                break;
+        }
+        if (requestCode != ACTIVITY_REQUEST_PICK_ATTACHMENT && tv != null) {
+            addAddressFromData(tv, data);
+        }
     }
 
     private boolean includeQuotedText() {
@@ -1701,6 +1960,11 @@ public class MessageCompose extends Activity implements OnClickListener, OnFocus
         switch (view.getId()) {
             case R.id.remove_attachment:
                 onDeleteAttachmentIconClicked(view);
+                break;
+            case R.id.to_recipients_picker:
+            case R.id.cc_recipients_picker:
+            case R.id.bcc_recipients_picker:
+                onPickContactsClicked(view);
                 break;
         }
     }
@@ -1720,6 +1984,37 @@ public class MessageCompose extends Activity implements OnClickListener, OnFocus
         deleteAttachment(mAttachments, attachment);
         updateAttachmentUi();
         setMessageChanged(true);
+    }
+
+    private void onPickContactsClicked(View view) {
+        int requestCode = -1;
+        MultiAutoCompleteTextView tv = null;
+        switch (view.getId()) {
+            case R.id.to_recipients_picker:
+                tv = mToView;
+                requestCode = ACTIVITY_REQUEST_PICK_CONTACT_TO;
+                break;
+            case R.id.cc_recipients_picker:
+                tv = mCcView;
+                requestCode = ACTIVITY_REQUEST_PICK_CONTACT_CC;
+                break;
+            case R.id.bcc_recipients_picker:
+                tv = mBccView;
+                requestCode = ACTIVITY_REQUEST_PICK_CONTACT_BCC;
+                break;
+        }
+
+        if (tv != null) {
+            tv.requestFocus();
+            String text = tv.getText().toString().trim();
+            // if the text is empty or end with ',' | ';', we needn't append the ','.
+            if (!TextUtils.isEmpty(text) && !text.endsWith(",") && !text.endsWith(";")) {
+                tv.append(",");
+            }
+        }
+        mPickingContact = true;
+        Intent intent = new Intent(ACTION_MULTI_PICK_EMAIL, Contacts.CONTENT_URI);
+        startActivityForResult(intent, requestCode);
     }
 
     /**
@@ -1913,7 +2208,7 @@ public class MessageCompose extends Activity implements OnClickListener, OnFocus
                 return 0;
             } else if (ACTION_REPLY_ALL.equals(action)) {
                 return 1;
-            } else if (ACTION_FORWARD.equals(action)) {
+            } else if (ACTION_FORWARD.equals(action) || ACTION_FORWARD_PARTLY.equals(action)) {
                 return 2;
             }
             Log.w(Logging.LOG_TAG, "Invalid action type for spinner");
@@ -2033,12 +2328,10 @@ public class MessageCompose extends Activity implements OnClickListener, OnFocus
                 && intent.hasExtra(Intent.EXTRA_STREAM)) {
             ArrayList<Parcelable> list = intent.getParcelableArrayListExtra(Intent.EXTRA_STREAM);
             if (list != null) {
-                for (Parcelable parcelable : list) {
-                    Uri uri = (Uri) parcelable;
-                    if (uri != null) {
-                        addAttachmentFromSendIntent(uri);
-                    }
-                }
+                final AddAttachmentThread thread = new AddAttachmentThread();
+                mProgressDialog = MyProgressDialog.newInstance(R.string.loading_attachments, thread);
+                thread.setUriList(list);
+                thread.start();
             }
         }
 
@@ -2213,7 +2506,7 @@ public class MessageCompose extends Activity implements OnClickListener, OnFocus
             }
             displayQuotedText(message.mText, message.mHtml);
             setIncludeQuotedText(true, false);
-        } else if (ACTION_FORWARD.equals(mAction)) {
+        } else if (ACTION_FORWARD.equals(mAction) || ACTION_FORWARD_PARTLY.equals(mAction)) {
             // If we had previously filled the recipients from a draft, don't erase them here!
             if (!ACTION_EDIT_DRAFT.equals(getIntent().getAction())) {
                 clearAddressViews();
@@ -2322,7 +2615,7 @@ public class MessageCompose extends Activity implements OnClickListener, OnFocus
     }
 
     private boolean isForward() {
-        return ACTION_FORWARD.equals(mAction);
+        return ACTION_FORWARD.equals(mAction) || ACTION_FORWARD_PARTLY.equals(mAction);
     }
 
     /**
@@ -2331,5 +2624,117 @@ public class MessageCompose extends Activity implements OnClickListener, OnFocus
      */
     private static String getAccountSignature(Account account) {
         return (account == null) ? null : account.mSignature;
+    }
+
+    private class AddAttachmentThread extends Thread {
+        private ArrayList<Parcelable> list = null;
+        private Attachment[] attachments = null;
+        private boolean stop = false;
+
+        public void setUriList(ArrayList<Parcelable> l) {
+            list = l;
+        }
+
+        public void setAttachments(Attachment[] l) {
+            attachments = l;
+        }
+
+        public void stopAddAttachment() {
+            stop = true;
+        }
+
+        @Override
+        public void run() {
+            // we will only set the list or set the attachments, but not all.
+            if (!(list == null ^ attachments == null)) {
+                return;
+            }
+
+            mUpdateAttachmentUiHandler.sendEmptyMessage(MSG_UPDATE_ATTACHMENT_UI_START);
+
+            int count = list == null ? attachments.length : list.size();
+            // The mAttachments will be modified in the AddAttachmentThread. The
+            // message will be saved by when onPause() called(e.g. a incoming
+            // call ringing, user presses HOME, etc), and SendOrSaveMessageTask
+            // thread will traverse the mAttachments list, as a result, a
+            // ConcurrentModifiedException will be thrown.
+            // Here we use a mutex lock the make the access to mAttachment
+            // variable in an exclusive way, avoid these two threads access the
+            // mAttachment in the same time.
+            synchronized (mDraft) {
+                for (int i = 0; i < count; i++) {
+                    if (stop) break;
+
+                    Attachment attachment = null;
+                    Object object = list == null ? attachments[i] : list.get(i);
+                    if (object instanceof Uri) {
+                        Uri uri = (Uri) object;
+                        if (uri != null) {
+                            attachment = loadAttachmentInfo(uri);
+                        }
+                    } else if (object instanceof Attachment) {
+                        attachment = (Attachment) object;
+                    }
+
+                    // The attachment maybe null, caused by the uri's scheme is not start with 'content' or 'file'.
+                    // So if the attachment is null, do nothing.
+                    if (attachment == null) continue;
+
+                    final String mimeType = attachment.mMimeType;
+                    if (!TextUtils.isEmpty(mimeType) && MimeUtility.mimeTypeMatches(mimeType,
+                            AttachmentUtilities.ACCEPTABLE_ATTACHMENT_SEND_INTENT_TYPES)) {
+                        addAttachment(attachment, false);
+                    }
+                }
+            }
+
+            if (!stop) {
+                mUpdateAttachmentUiHandler.sendEmptyMessage(MSG_UPDATE_ATTACHMENT_UI_FINISH);
+            } else {
+                mAttachments.clear();
+                mUpdateAttachmentUiHandler.sendEmptyMessage(MSG_UPDATE_ATTACHMENT_UI_CANCEL);
+            }
+        }
+    }
+
+    private static class MyProgressDialog extends DialogFragment {
+        private static final String MESSAGE = "message";
+        private AddAttachmentThread thread = null;
+
+        public static MyProgressDialog newInstance(int message, AddAttachmentThread t) {
+            MyProgressDialog dialog = new MyProgressDialog();
+            dialog.thread = t;
+            final Bundle args = new Bundle();
+            args.putInt(MESSAGE, message);
+            dialog.setArguments(args);
+            return dialog;
+        }
+
+        @Override
+        public Dialog onCreateDialog(Bundle savedInstanceState) {
+            final int message = getArguments().getInt(MESSAGE);
+
+            final ProgressDialog progress = new ProgressDialog(getActivity(), ProgressDialog.STYLE_SPINNER);
+            progress.setMessage(getString(message));
+            progress.setCancelable(true);
+            return progress;
+        }
+
+        @Override
+        public void onCancel(DialogInterface dialog) {
+            if (thread != null) {
+                thread.stopAddAttachment();
+            }
+            super.onCancel(dialog);
+        }
+
+        @Override
+        public void onDismiss(DialogInterface dialog) {
+            if (thread != null) {
+                thread.stopAddAttachment();
+            }
+            super.onDismiss(dialog);
+        }
+
     }
 }

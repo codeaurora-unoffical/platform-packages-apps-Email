@@ -17,8 +17,14 @@
 package com.android.email.activity;
 
 import android.app.Activity;
+import android.app.AlertDialog;
+import android.app.Dialog;
+import android.app.DialogFragment;
+import android.app.FragmentTransaction;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
+import android.database.Cursor;
 import android.net.Uri;
 import android.os.Bundle;
 import android.text.TextUtils;
@@ -352,18 +358,47 @@ public class Welcome extends Activity {
      * </pre>
      */
     private void resolveAccount() {
-        final int numAccount = EmailContent.count(this, Account.CONTENT_URI);
+        final int numAccount = getAccountNum();
+        Intent intent = getIntent();
+        String action = intent.getAction();
+        Uri uri = intent.getData();
         if (numAccount == 0) {
-            AccountSetupBasics.actionNewAccount(this);
-            finish();
+            // no account
+            if (Intent.ACTION_SENDTO.equals(action)
+                    || Intent.ACTION_SEND.equals(action)
+                    || Intent.ACTION_SEND_MULTIPLE.equals(action)
+                    || (uri != null && uri.isOpaque())) {
+                UiUtilities.setNeededMsgComp(true, intent);
+                // If has no email account when share by email in other apps, it
+                // will show pop-up to indicate config new account.
+                ConfigureAccountFragment dialogFragment = ConfigureAccountFragment
+                        .newInstance();
+                dialogFragment.show(getFragmentManager(),
+                        ConfigureAccountFragment.TAG);
+            } else {
+                UiUtilities.setNeededMsgComp(false, null);    // reset the value.
+                AccountSetupBasics.actionNewAccount(this);
+                finish();
+            }
             return;
         } else {
-            mAccountId = resolveAccountId(this, mAccountId, mAccountUuid);
-            if (Account.isNormalAccount(mAccountId) &&
-                    Mailbox.findMailboxOfType(this, mAccountId, Mailbox.TYPE_INBOX)
-                            == Mailbox.NO_MAILBOX) {
-                startInboxLookup();
+            // has account
+            if (Intent.ACTION_SENDTO.equals(action)
+                    || Intent.ACTION_SEND.equals(action)
+                    || Intent.ACTION_SEND_MULTIPLE.equals(action)
+                    || (uri != null && uri.isOpaque())) {
+                intent.setClass(this, MessageCompose.class);
+                startActivity(intent);
+                finish();
                 return;
+            } else {
+                mAccountId = resolveAccountId(this, mAccountId, mAccountUuid);
+                if (Account.isNormalAccount(mAccountId) &&
+                        Mailbox.findMailboxOfType(this, mAccountId, Mailbox.TYPE_INBOX)
+                                == Mailbox.NO_MAILBOX) {
+                    startInboxLookup();
+                    return;
+                }
             }
         }
         startEmailActivity();
@@ -384,6 +419,19 @@ public class Welcome extends Activity {
         }
         startActivity(i);
         finish();
+    }
+
+    private int getAccountNum() {
+        Cursor c = getContentResolver().query(Account.CONTENT_URI, Account.ID_PROJECTION, null, null, null);
+        try {
+            if (c == null) return 0;
+            return c.getCount();
+        } finally {
+            if (c != null) {
+                c.close();
+                c = null;
+            }
+        }
     }
 
     private final MailboxFinder.Callback mMailboxFinderCallback = new MailboxFinder.Callback() {
@@ -425,8 +473,59 @@ public class Welcome extends Activity {
         public void onMailboxFound(long accountId, long mailboxId) {
             cleanUp();
 
+            // When get the mailbox success, call this method to register the MessageContentObserver
+            Email.setServicesEnabledAsync(Welcome.this);
             // Okay the account has Inbox now.  Start the main activity.
-            startEmailActivity();
+            if (UiUtilities.getNeededMsgComp() && UiUtilities.getStartMsgCompIntent() != null) {
+                startActivity(UiUtilities.getStartMsgCompIntent());
+                UiUtilities.setNeededMsgComp(false, null);
+                finish();
+            } else {
+                startEmailActivity();
+            }
         }
     };
+
+    /**
+     * Dialog fragment to show "configure account?" dialog
+     */
+    public static class ConfigureAccountFragment extends DialogFragment {
+        private final static String TAG = "ConfigureAccountFragment";
+
+        /**
+         * Create the dialog
+         */
+        public static ConfigureAccountFragment newInstance() {
+            return new ConfigureAccountFragment();
+        }
+
+        @Override
+        public void onDestroyView() {
+            super.onDestroyView();
+            Activity activity = getActivity();
+            if (activity != null) {
+                activity.finish();
+            }
+        }
+
+        @Override
+        public Dialog onCreateDialog(Bundle savedInstanceState) {
+            Context context = getActivity();
+            Dialog dialog = new AlertDialog.Builder(context)
+                    .setTitle(R.string.configure_email_dialog_title)
+                    .setMessage(R.string.configure_email_dialog_message)
+                    .setPositiveButton(R.string.okay_action,
+                            new DialogInterface.OnClickListener() {
+                                public void onClick(DialogInterface dialog,
+                                        int whichButton) {
+                                    AccountSetupBasics
+                                            .actionNewAccount(getActivity());
+                                    dismiss();
+                                }
+                            }).setNegativeButton(R.string.cancel_action, null)
+                    .create();
+            dialog.setCanceledOnTouchOutside(false);
+            return dialog;
+        }
+    }
 }

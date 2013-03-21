@@ -50,6 +50,7 @@ import com.android.emailcommon.provider.Mailbox;
 import com.android.emailcommon.service.SearchParams;
 import com.android.emailcommon.utility.Utility;
 import com.google.common.annotations.VisibleForTesting;
+import com.qrd.plugin.feature_query.FeatureQuery;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -538,10 +539,12 @@ class ImapFolder extends Folder {
          * BODY_SANE - UID FETCH (BODY.PEEK[]<0.N>) where N = max bytes returned
          * BODY      - UID FETCH (BODY.PEEK[])
          * Part      - UID FETCH (BODY.PEEK[ID]) where ID = mime part ID
+         * Part_SANE - UID FETCH (BODY.PEEK[ID]<0.N>) where ID = mime part ID and N = max bytes returned
+         *           - this is add for sync size.
          */
 
         final LinkedHashSet<String> fetchFields = new LinkedHashSet<String>();
-
+        int syncSize = messages[0].getNeedSyncSize();
         fetchFields.add(ImapConstants.UID);
         if (fp.contains(FetchProfile.Item.FLAGS)) {
             fetchFields.add(ImapConstants.FLAGS);
@@ -556,7 +559,12 @@ class ImapFolder extends Folder {
         }
 
         if (fp.contains(FetchProfile.Item.BODY_SANE)) {
-            fetchFields.add(ImapConstants.FETCH_FIELD_BODY_PEEK_SANE);
+            if (FeatureQuery.FEATURE_EMAIL_SET_SYNCSIZE
+                    && syncSize != Utility.ENTIRE_MAIL) {
+                fetchFields.add(ImapConstants.FETCH_FIELD_BODY_PEEK + "<0." + syncSize + ">");
+            } else {
+                fetchFields.add(ImapConstants.FETCH_FIELD_BODY_PEEK_SANE);
+            }
         }
         if (fp.contains(FetchProfile.Item.BODY)) {
             fetchFields.add(ImapConstants.FETCH_FIELD_BODY_PEEK);
@@ -567,8 +575,14 @@ class ImapFolder extends Folder {
             String[] partIds =
                     fetchPart.getHeader(MimeHeader.HEADER_ANDROID_ATTACHMENT_STORE_DATA);
             if (partIds != null) {
-                fetchFields.add(ImapConstants.FETCH_FIELD_BODY_PEEK_BARE
-                        + "[" + partIds[0] + "]");
+                String fetchFieldCommand = ImapConstants.FETCH_FIELD_BODY_PEEK_BARE
+                        + "[" + partIds[0] + "]";
+                if (FeatureQuery.FEATURE_EMAIL_SET_SYNCSIZE
+                        && syncSize != Utility.ENTIRE_MAIL
+                        && fetchPart.getMimeType().contains(ImapConstants.TEXT.toLowerCase())) {
+                    fetchFieldCommand = fetchFieldCommand + "<0." + syncSize + ">";
+                }
+                fetchFields.add(fetchFieldCommand);
             }
         }
 
@@ -735,6 +749,7 @@ class ImapFolder extends Folder {
              * This is a multipart/*
              */
             MimeMultipart mp = new MimeMultipart();
+            int textplainIndex = -1;
             for (int i = 0, count = bs.size(); i < count; i++) {
                 ImapElement e = bs.getElementOrNone(i);
                 if (e.isList()) {
@@ -748,6 +763,15 @@ class ImapFolder extends Folder {
 
                     } else {
                         parseBodyStructure(bs.getListOrEmpty(i), bp, id + "." + (i + 1));
+                    }
+                    /**
+                     * If the MimeMultipart has the TEXT/HTML content and TEXT/PLAIN content,
+                     * we could only download the TEXT/HTML content to save data traffic.
+                     */
+                    if (bp.getMimeType().equals("text/plain")) {
+                        textplainIndex = i;
+                    } else if (textplainIndex != -1 && bp.getMimeType().equals("text/html")) {
+                        mp.removeBodyPart(textplainIndex);
                     }
                     mp.addBodyPart(bp);
 
@@ -773,6 +797,7 @@ class ImapFolder extends Folder {
              body description
              body encoding
              body size
+             body line
              */
 
             final ImapString type = bs.getStringOrEmpty(0);

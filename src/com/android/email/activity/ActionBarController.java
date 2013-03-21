@@ -311,7 +311,14 @@ public class ActionBarController {
      *     search is active, and if the current layout supports it.
      */
     private boolean shouldShowSearchBar() {
-        return isInSearchMode() && (mTitleMode != Callback.TITLE_MODE_MESSAGE_SUBJECT);
+        // If a {@link MailboxListFragment} is installed, the mTitleMode is
+        // Callback.TITLE_MODE_ACCOUNT_WITH_ALL_FOLDERS_LABEL, and if a {@link
+        // MessageViewFragment} is installed, the the mTitleMode is
+        // Callback.TITLE_MODE_MESSAGE_SUBJECT.
+        // But when a {@link MailboxListFragment} is installed or a {@link
+        // MessageViewFragment} is installed, the search bar should not be shown
+        return isInSearchMode() && (mTitleMode != Callback.TITLE_MODE_MESSAGE_SUBJECT)
+                && (mTitleMode != Callback.TITLE_MODE_ACCOUNT_WITH_ALL_FOLDERS_LABEL);
     }
 
     /**
