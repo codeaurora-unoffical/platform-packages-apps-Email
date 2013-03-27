@@ -871,6 +871,17 @@ public class AccountCheckSettingsFragment extends Fragment {
             return builder.create();
         }
 
+		//add function for cancel the dialog
+        @Override
+        public void onCancel(DialogInterface dialog) {
+            final AccountCheckSettingsFragment target =
+                    (AccountCheckSettingsFragment) getTargetFragment();
+
+            if(target != null){
+                target.finish();
+            }
+            super.onCancel(dialog);
+        }
     }
 
     /**

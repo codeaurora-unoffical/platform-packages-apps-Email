@@ -132,6 +132,22 @@ public class AccountSetupNames extends AccountSetupActivity implements OnClickLi
         }
     }
 
+    @Override
+    public void onResume() {
+        super.onResume();
+        // validate field if need to show warning.
+        validateFields();
+    }
+
+    @Override
+    public void onPause() {
+        super.onPause();
+        // Clear name view's warning info for validateFields in onResume().
+        if (!mEasAccount) {
+            mName.setError(null);
+        }
+    }
+
     private void prefillNameFromProfile() {
         new EmailAsyncTask<Void, Void, String>(null) {
             @Override

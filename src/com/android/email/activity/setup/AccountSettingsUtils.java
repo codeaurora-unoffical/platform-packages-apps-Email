@@ -20,6 +20,7 @@ import android.content.ContentValues;
 import android.content.Context;
 import android.content.res.XmlResourceParser;
 import android.text.Editable;
+import android.text.TextUtils;
 import android.util.Log;
 import android.widget.EditText;
 
@@ -30,6 +31,7 @@ import com.android.emailcommon.Logging;
 import com.android.emailcommon.provider.Account;
 import com.android.emailcommon.provider.EmailContent.AccountColumns;
 import com.google.common.annotations.VisibleForTesting;
+import com.qrd.plugin.feature_query.*;
 
 import java.io.Serializable;
 
@@ -74,6 +76,7 @@ public class AccountSettingsUtils {
         cv.put(AccountColumns.FLAGS, account.mFlags);
         cv.put(AccountColumns.SYNC_LOOKBACK, account.mSyncLookback);
         cv.put(AccountColumns.SECURITY_SYNC_KEY, account.mSecuritySyncKey);
+        cv.put(AccountColumns.SYNC_SIZE, account.mSyncSize);
         return cv;
     }
 
@@ -90,6 +93,9 @@ public class AccountSettingsUtils {
      */
     public static Provider findProviderForDomain(Context context, String domain) {
         Provider p = VendorPolicyLoader.getInstance(context).findProviderForDomain(domain);
+        if (FeatureQuery.FEATURE_EMAIL_LOAD_SPEC_PROVIDER && p == null) {
+            p = findProviderForDomain(context, domain, R.xml.providers_spec);
+        }
         if (p == null) {
             p = findProviderForDomain(context, domain, R.xml.providers_product);
         }
@@ -118,6 +124,13 @@ public class AccountSettingsUtils {
                     String providerDomain = getXmlAttribute(context, xml, "domain");
                     try {
                         if (matchProvider(domain, providerDomain)) {
+                            if (FeatureQuery.FEATURE_EMAIL_LOAD_SPEC_PROVIDER) {
+                                String spec = getXmlAttribute(context, xml, "spec");
+                                if (!TextUtils.isEmpty(spec)
+                                        && !spec.equals(DefaultQuery.LOAD_SPEC_PROVIDER)) {
+                                    continue;
+                                }
+                            }
                             provider = new Provider();
                             provider.id = getXmlAttribute(context, xml, "id");
                             provider.label = getXmlAttribute(context, xml, "label");

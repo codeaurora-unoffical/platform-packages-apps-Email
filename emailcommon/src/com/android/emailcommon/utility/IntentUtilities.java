@@ -113,6 +113,9 @@ public final class IntentUtilities {
         if (uri == null) {
             return null;
         }
+        if (uri.isOpaque()) {
+            return null;
+        }
         String uuid = uri.getQueryParameter(ACCOUNT_UUID_PARAM);
         return TextUtils.isEmpty(uuid) ? null : uuid;
     }
@@ -126,6 +129,7 @@ public final class IntentUtilities {
     }
 
     private static long getLongParamFromUri(Uri uri, String paramName, long defaultValue) {
+        if (uri != null && uri.isOpaque()) return defaultValue;
         final String value = uri.getQueryParameter(paramName);
         if (!TextUtils.isEmpty(value)) {
             try {

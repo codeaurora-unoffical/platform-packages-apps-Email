@@ -348,6 +348,13 @@ public class AccountSetupOutgoingFragment extends AccountServerBaseFragment
     public void onNext() {
         Account account = SetupData.getAccount();
         HostAuth sendAuth = account.getOrCreateHostAuthSend(mContext);
+        // Create or get recvAuth in order to avoid NullPointerException
+        // occurs in SetupData. For if user press "Add account",
+        // and account's recvAuth and sendAuth will be commit to null.
+        // The receAuth verified in AccountSetupIncomingFragment.
+        if (null == account.mHostAuthRecv) {
+            account.getOrCreateHostAuthRecv(mContext);
+        }
 
         if (mRequireLoginView.isChecked()) {
             String userName = mUsernameView.getText().toString().trim();

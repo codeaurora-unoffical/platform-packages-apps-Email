@@ -323,6 +323,8 @@
     <string name="account_setup_options_mail_window_1month" msgid="5846359669750047081">"1 個月"</string>
     <string name="account_setup_options_mail_window_all" msgid="5372861827683632364">"全部"</string>
     <string name="account_setup_options_mail_window_default" msgid="8321351926520165832">"使用帳戶預設值"</string>
+    <string name="account_setup_options_mail_sync_size_label">同步每封郵件的緩存空間</string>
+    <string name="account_setup_options_mail_sync_size_all">同步整封郵件</string>
     <string name="account_setup_failed_dlg_auth_message" msgid="42827150104879570">"使用者名稱或密碼不正確。"</string>
     <string name="account_setup_failed_dlg_auth_message_fmt" msgid="8598560266430207606">"使用者名稱或密碼不正確。"\n"(<xliff:g id="ERROR">%s</xliff:g>)"</string>
     <string name="account_setup_failed_dlg_certificate_message" msgid="3836152264696108805">"無法安全連線至伺服器。"</string>
@@ -465,4 +467,22 @@
     <string name="search_slow_warning_message" msgid="8494483410797387903">"有些伺服器可能需要較長的時間。"</string>
     <string name="action_bar_mailbox_list_title" msgid="7484457755531286333">"資料夾"</string>
     <string name="require_manual_sync_message" msgid="7777357288642785955">"系統會在漫遊時停用這個帳戶的背景同步處理。"</string>
+    <string name="fetch_entire_mail">"獲取整封郵件"</string>
+    <string name="no_active_network">"當前無可用網絡"</string>
+    <string name="start_send_messages_notification">正在發送...</string>
+    <string name="send_messages_success_notification">發送成功</string>
+    <string name="send_messages_failed_notification">發送失敗</string>
+
+    <!-- add the Language of traditional Chinese -->
+    <string name="send_mail_fail_network_disconnect">"無可用的網絡連接，郵件會暫時滯留發件箱"</string>
+
+    <!-- Toast that account description is empty, couldn't modify -->
+    <string name="account_description_modify_failed">"賬戶名稱爲空，修改爲默認賬戶名稱。"</string>
+    <!-- Toast that account name is empty, couldn't modify -->
+    <string name="account_name_modify_failed">"姓名爲空，修改爲默認姓名。"</string>
+
+    <!-- This is the title for the configure email account dialog. -->
+    <string name="configure_email_dialog_title">"配置賬戶"</string>
+    <!-- This is the message for the configure email account dialog. -->
+    <string name="configure_email_dialog_message">"系統沒有任何電子郵件帳戶，您要配置一個嗎？"</string>
 </resources>

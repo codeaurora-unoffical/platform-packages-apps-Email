@@ -21,6 +21,7 @@ import com.android.email.R;
 import android.app.Activity;
 import android.app.Fragment;
 import android.content.Context;
+import android.content.Intent;
 import android.content.res.Resources;
 import android.view.View;
 
@@ -179,5 +180,21 @@ public class UiUtilities {
      */
     public static boolean showTwoPaneSearchResults(Context context) {
         return context.getResources().getBoolean(R.bool.show_two_pane_search_result);
+    }
+
+    private static boolean sSetupAccountBeforeMsgComp = false;
+    private static Intent sStartMsgCompIntent = null;
+
+    public static void setNeededMsgComp(boolean value, Intent i) {
+        sSetupAccountBeforeMsgComp = value;
+        sStartMsgCompIntent = i;
+    }
+
+    public static boolean getNeededMsgComp() {
+        return sSetupAccountBeforeMsgComp;
+    }
+
+    public static Intent getStartMsgCompIntent() {
+        return sStartMsgCompIntent;
     }
 }

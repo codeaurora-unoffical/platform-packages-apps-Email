@@ -91,7 +91,8 @@ public abstract class Store {
         // An existing account might have been deleted
         if (hostAuth == null) return null;
         Store store = sStores.get(hostAuth);
-        if (store == null) {
+        if (store == null
+                || (store.mAccount != null && account.mId != -1 && store.mAccount.mId != account.mId)) {
             Context appContext = context.getApplicationContext();
             Class<? extends Store> klass = sStoreClasses.get(hostAuth.mProtocol);
             try {

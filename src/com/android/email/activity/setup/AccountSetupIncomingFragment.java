@@ -53,6 +53,8 @@ public class AccountSetupIncomingFragment extends AccountServerBaseFragment {
 
     private final static String STATE_KEY_CREDENTIAL = "AccountSetupIncomingFragment.credential";
     private final static String STATE_KEY_LOADED = "AccountSetupIncomingFragment.loaded";
+    private final static String STATE_KEY_USERNAMEVIEW =
+            "AccountSetupIncomingFragment.isUsernameViewWarning";
 
     private static final int POP3_PORT_NORMAL = 110;
     private static final int POP3_PORT_SSL = 995;
@@ -77,6 +79,8 @@ public class AccountSetupIncomingFragment extends AccountServerBaseFragment {
     private boolean mStarted;
     private boolean mConfigured;
     private boolean mLoaded;
+    // Use for save mUsernameView's error info status.
+    private boolean mUsernameWarning;
     private String mCacheLoginCredential;
 
     /**
@@ -93,6 +97,7 @@ public class AccountSetupIncomingFragment extends AccountServerBaseFragment {
         if (savedInstanceState != null) {
             mCacheLoginCredential = savedInstanceState.getString(STATE_KEY_CREDENTIAL);
             mLoaded = savedInstanceState.getBoolean(STATE_KEY_LOADED, false);
+            mUsernameWarning = savedInstanceState.getBoolean(STATE_KEY_USERNAMEVIEW, false);
         }
     }
 
@@ -228,6 +233,11 @@ public class AccountSetupIncomingFragment extends AccountServerBaseFragment {
         }
         super.onResume();
         validateFields();
+        // Setup mUsernameView's error info if showing before onPause().
+        if (mSettingsMode && mUsernameWarning && (null != mUsernameView)) {
+            mUsernameView.setError(
+                    getString(R.string.account_setup_username_uneditable_error));
+        }
     }
 
     @Override
@@ -236,6 +246,16 @@ public class AccountSetupIncomingFragment extends AccountServerBaseFragment {
             Log.d(Logging.LOG_TAG, "AccountSetupIncomingFragment onPause");
         }
         super.onPause();
+        // Remember mUsernameView's satatus for recover when onResume.
+        if (mSettingsMode && (null != mUsernameView)
+                && !TextUtils.isEmpty(mUsernameView.getError())) {
+            // Set EditText's error message null,
+            // avoid lost focus and fail to showError.
+            mUsernameView.setError(null);
+            mUsernameWarning = true;
+        } else {
+            mUsernameWarning = false;
+        }
     }
 
     /**
@@ -270,6 +290,7 @@ public class AccountSetupIncomingFragment extends AccountServerBaseFragment {
 
         outState.putString(STATE_KEY_CREDENTIAL, mCacheLoginCredential);
         outState.putBoolean(STATE_KEY_LOADED, mLoaded);
+        outState.putBoolean(STATE_KEY_USERNAMEVIEW, mUsernameWarning);
     }
 
     /**

@@ -532,7 +532,8 @@ abstract class UIControllerBase implements MailboxListFragment.Callback,
      */
     public final void switchAccount(long accountId, boolean forceShowInbox) {
 
-        if (Account.isSecurityHold(mActivity, accountId)) {
+        // If no account exist, there is no need to check "security hold status".
+        if (Account.NO_ACCOUNT == accountId || Account.isSecurityHold(mActivity, accountId)) {
             ActivityHelper.showSecurityHoldDialog(mActivity, accountId);
             mActivity.finish();
             return;
