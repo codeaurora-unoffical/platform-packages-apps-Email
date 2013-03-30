@@ -22,6 +22,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
+import android.database.sqlite.SQLiteException;
 import android.util.Log;
 
 import com.android.email.activity.MessageCompose;
@@ -110,19 +111,23 @@ public class Email extends Application {
      */
     public static boolean setServicesEnabledSync(Context context) {
         Cursor c = null;
+        //Modified for handle the SQLiteException
+        boolean enable = false;
         try {
             c = context.getContentResolver().query(
                     Account.CONTENT_URI,
                     Account.ID_PROJECTION,
                     null, null, null);
-            boolean enable = c != null && c.getCount() > 0;
+            enable = c != null && c.getCount() > 0;
             setServicesEnabled(context, enable);
-            return enable;
+        } catch (SQLiteException ex) {
+            ex.printStackTrace();
         } finally {
             if (c != null) {
                 c.close();
             }
         }
+		return enable;
     }
 
     private static void setServicesEnabled(Context context, boolean enabled) {

@@ -23,6 +23,7 @@ import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
 import android.database.Cursor;
+import android.database.sqlite.SQLiteException;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.IBinder;
@@ -679,7 +680,10 @@ public class Controller {
                                     new String[] { Long.toString(accountId) });
                         }
                     }
-                } finally {
+                }catch (SQLiteException ex) {
+                    //add catch for handle the SQLiteException
+                	ex.printStackTrace();
+				} finally {
                     if (c != null) {
                         c.close();
                     }
