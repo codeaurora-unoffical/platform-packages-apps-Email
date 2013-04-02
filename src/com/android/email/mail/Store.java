@@ -107,10 +107,22 @@ public abstract class Store {
                 Method m = klass.getMethod("newInstance", Account.class, Context.class);
                 store = (Store)m.invoke(null, account, appContext);
             } catch (Exception e) {
-                Log.d(Logging.LOG_TAG, String.format(
-                        "exception %s invoking method %s#newInstance(Account, Context) for %s",
-                        e.toString(), klass.getName(), account.mDisplayName));
-                throw new MessagingException("Can't instantiate Store for " + account.mDisplayName);
+                if (klass != null && account != null) {
+                    Log.d(Logging.LOG_TAG, String.format(
+                            "exception %s invoking method %s#newInstance(Account, Context) for %s",
+                            e.toString(), klass.getName(), account.mDisplayName));
+                    throw new MessagingException(
+                            "Can't instantiate Store for " + account.mDisplayName);
+                } else {
+                    Log.d(Logging.LOG_TAG, String.format(
+                            "exception %s invoking method %s#newInstance(Account, Context) for %s",
+                            e.toString(),
+                            (klass != null ? klass.getName() : "klass(null caused by mProtocol is'"+
+                                    hostAuth.mProtocol + "')"),
+                            (account != null ? account.mDisplayName : "account(null)")));
+                    throw new MessagingException("Can't instantiate Store for " +
+                            (account != null ? account.mDisplayName : "account(null)"));
+                }
             }
             // Don't cache this unless it's we've got a saved HostAuth
             if (hostAuth.mId != EmailContent.NOT_SAVED) {
