@@ -282,7 +282,10 @@ public final class HostAuth extends EmailContent implements HostAuthColumns, Par
             } else if (SCHEME_EAS.equals(mProtocol)) {
                 mPort = useSSL ? 443 : 80;
             } else if (SCHEME_SMTP.equals(mProtocol)) {
-                mPort = useSSL ? 465 : 587;
+            	//M: modified default port from 587 to 25
+                //mPort = useSSL ? 465 : 587;
+                mPort = useSSL ? 465 : 25;
+				//end
             }
         }
 

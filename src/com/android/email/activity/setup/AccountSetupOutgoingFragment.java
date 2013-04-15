@@ -54,7 +54,7 @@ public class AccountSetupOutgoingFragment extends AccountServerBaseFragment
 
     private final static String STATE_KEY_LOADED = "AccountSetupOutgoingFragment.loaded";
 
-    private static final int SMTP_PORT_NORMAL = 587;
+    private static final int SMTP_PORT_NORMAL = 25; //M: modified default port from 587 to 25
     private static final int SMTP_PORT_SSL    = 465;
 
     private EditText mUsernameView;
