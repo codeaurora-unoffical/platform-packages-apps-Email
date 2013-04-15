@@ -1004,10 +1004,17 @@ public class MessageCompose extends Activity implements OnClickListener, OnFocus
                 loadAttachments(message.mId, mAccount, new AttachmentLoadedCallback() {
                     @Override
                     public void onAttachmentLoaded(Attachment[] attachments) {
+                        //M: add the attachment from draft
+						/*
                         final AddAttachmentThread thread = new AddAttachmentThread();
                         mProgressDialog = MyProgressDialog.newInstance(R.string.loading_attachments, thread);
                         thread.setAttachments(attachments);
                         thread.start();
+						*/
+						for (Attachment attachment: attachments) {
+                            addAttachment(attachment, true);
+                        }
+						//end
                     }
                 });
 
