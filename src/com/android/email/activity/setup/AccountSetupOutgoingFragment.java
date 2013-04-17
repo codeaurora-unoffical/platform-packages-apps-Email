@@ -54,7 +54,7 @@ public class AccountSetupOutgoingFragment extends AccountServerBaseFragment
 
     private final static String STATE_KEY_LOADED = "AccountSetupOutgoingFragment.loaded";
 
-    private static final int SMTP_PORT_NORMAL = 587;
+    private static final int SMTP_PORT_NORMAL = 25; //M: modified default port from 587 to 25
     private static final int SMTP_PORT_SSL    = 465;
 
     private EditText mUsernameView;
@@ -348,6 +348,13 @@ public class AccountSetupOutgoingFragment extends AccountServerBaseFragment
     public void onNext() {
         Account account = SetupData.getAccount();
         HostAuth sendAuth = account.getOrCreateHostAuthSend(mContext);
+        // Create or get recvAuth in order to avoid NullPointerException
+        // occurs in SetupData. For if user press "Add account",
+        // and account's recvAuth and sendAuth will be commit to null.
+        // The receAuth verified in AccountSetupIncomingFragment.
+        if (null == account.mHostAuthRecv) {
+            account.getOrCreateHostAuthRecv(mContext);
+        }
 
         if (mRequireLoginView.isChecked()) {
             String userName = mUsernameView.getText().toString().trim();

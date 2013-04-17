@@ -57,6 +57,8 @@ import com.android.emailcommon.provider.HostAuth;
 import com.android.emailcommon.provider.Mailbox;
 import com.android.emailcommon.provider.ProviderUnavailableException;
 
+import com.qrd.plugin.feature_query.FeatureQuery;
+
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileDescriptor;
@@ -88,6 +90,9 @@ public class Utility {
 
     public static final String[] EMPTY_STRINGS = new String[0];
     public static final Long[] EMPTY_LONGS = new Long[0];
+
+    /** Add for the new feature sync size per mail */
+    public static final int ENTIRE_MAIL = -1;
 
     // "GMT" + "+" or "-" + 4 digits
     private static final Pattern DATE_CLEANUP_PATTERN_WRONG_TIMEZONE =
@@ -194,7 +199,9 @@ public class Utility {
 
     public static boolean isServerNameValid(String serverName) {
         serverName = serverName.trim();
-        if (TextUtils.isEmpty(serverName)) {
+        // To check whether serverName's valid.To prevent IllegalArgumentException.
+        // If serverName is Empty or it's first not empty character is '/',return false.
+        if (TextUtils.isEmpty(serverName) || serverName.startsWith("/")) {
             return false;
         }
         try {
@@ -324,6 +331,37 @@ public class Utility {
         }
 
         return null;
+    }
+
+    /**
+     * Look for an existing account's sync size.
+     *
+     * @param context a system context
+     * @param allowAccountId this account Id will not trigger (when editing an existing account)
+     * @return -1 = entire mail.  size = the account sync size as user set.
+     */
+    public static int getAccountSyncSize(Context context, long allowAccountId) {
+        if (!FeatureQuery.FEATURE_EMAIL_SET_SYNCSIZE) {
+            return -1;
+        }
+
+        ContentResolver resolver = context.getContentResolver();
+        String[] projection = new String[]{ Account.ID, Account.SYNC_SIZE };
+        String selection = Account.ID + "=" + allowAccountId;
+        Cursor c = resolver.query(Account.CONTENT_URI, projection, selection, null, null);
+        try {
+            if (c.moveToNext()) {
+                int syncSize = Integer.parseInt(c.getString(1));
+                return syncSize;
+            } else {
+                return -1;
+            }
+        } finally {
+            if (c != null) {
+                c.close();
+                c = null;
+            }
+        }
     }
 
     /**

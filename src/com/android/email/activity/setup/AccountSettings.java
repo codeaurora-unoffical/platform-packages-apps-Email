@@ -48,7 +48,14 @@ import com.android.emailcommon.utility.IntentUtilities;
 import com.android.emailcommon.utility.Utility;
 
 import java.util.List;
-
+import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.Executor;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeUnit;
 /**
  * Handles account preferences, using multi-pane arrangement when possible.
  *
@@ -107,6 +114,30 @@ public class AccountSettings extends PreferenceActivity {
             = new AccountSettingsFragmentCallback();
     private final AccountServerSettingsFragmentCallback mAccountServerSettingsFragmentCallback
             = new AccountServerSettingsFragmentCallback();
+
+    // The Variables below is for construct a thread pool for LoadAccountListTask.
+    private static final int CORE_POOL_SIZE = 5;
+    private static final int MAXIMUM_POOL_SIZE = 128;
+    private static final int KEEP_ALIVE = 1;
+
+    private static final ThreadFactory sThreadFactory = new ThreadFactory() {
+        private final AtomicInteger mCount = new AtomicInteger(1);
+
+        public Thread newThread(Runnable r) {
+            return new Thread(r, "AsyncTask #" + mCount.getAndIncrement());
+        }
+    };
+
+    private static final BlockingQueue<Runnable> sPoolWorkQueue =
+            new LinkedBlockingQueue<Runnable>(10);
+
+    /**
+     * An {@link Executor} that can be used to execute tasks in parallel.
+     */
+    public static final Executor THREAD_POOL_EXECUTOR
+            = new ThreadPoolExecutor(CORE_POOL_SIZE, MAXIMUM_POOL_SIZE, KEEP_ALIVE,
+                    TimeUnit.SECONDS, sPoolWorkQueue, sThreadFactory);
+
 
     /**
      * Display (and edit) settings for a specific account, or -1 for any/all accounts

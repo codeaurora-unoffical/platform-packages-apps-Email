@@ -31,6 +31,8 @@ import android.content.res.Resources;
 import android.database.ContentObserver;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.Paint;
+import android.media.MediaFile;
 import android.media.MediaScannerConnection;
 import android.net.Uri;
 import android.os.Bundle;
@@ -45,6 +47,7 @@ import android.util.Log;
 import android.util.Patterns;
 import android.view.LayoutInflater;
 import android.view.View;
+import android.view.View.OnLayoutChangeListener;
 import android.view.ViewGroup;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
@@ -59,6 +62,7 @@ import com.android.email.AttachmentInfo;
 import com.android.email.Controller;
 import com.android.email.ControllerResultUiThreadWrapper;
 import com.android.email.Email;
+import com.android.email.EmailConnectivityManager;
 import com.android.email.Preferences;
 import com.android.email.R;
 import com.android.email.Throttle;
@@ -76,6 +80,7 @@ import com.android.emailcommon.utility.AttachmentUtilities;
 import com.android.emailcommon.utility.EmailAsyncTask;
 import com.android.emailcommon.utility.Utility;
 import com.google.common.collect.Maps;
+import com.qrd.plugin.feature_query.FeatureQuery;
 
 import org.apache.commons.io.IOUtils;
 
@@ -98,6 +103,7 @@ import java.util.regex.Pattern;
 public abstract class MessageViewFragmentBase extends Fragment implements View.OnClickListener {
     private static final String BUNDLE_KEY_CURRENT_TAB = "MessageViewFragmentBase.currentTab";
     private static final String BUNDLE_KEY_PICTURE_LOADED = "MessageViewFragmentBase.pictureLoaded";
+    private static final String BUNDLE_ALWAYS_PICTURES_SHOW = "MessageViewFragmentBase.alwaysPicturesShow";
     private static final int PHOTO_LOADER_ID = 1;
     protected Context mContext;
 
@@ -105,6 +111,34 @@ public abstract class MessageViewFragmentBase extends Fragment implements View.O
     private static final Pattern IMG_TAG_START_REGEX = Pattern.compile("<(?i)img\\s+");
     // Regex that matches Web URL protocol part as case insensitive.
     private static final Pattern WEB_URL_PROTOCOL = Pattern.compile("(?i)http|https://");
+	//The updated WEB_URL for message view
+	private static final String GOOD_IRI_CHAR_ONLY_ENG_NUM = "a-zA-Z0-9";
+    private static final Pattern WEB_URL = Pattern.compile(
+        "((?:(http|https|Http|Https|rtsp|Rtsp):\\/\\/(?:(?:[a-zA-Z0-9\\$\\-\\_\\.\\+\\!\\*\\'\\(\\)"
+        + "\\,\\;\\?\\&\\=]|(?:\\%[a-fA-F0-9]{2})){1,64}(?:\\:(?:[a-zA-Z0-9\\$\\-\\_"
+        + "\\.\\+\\!\\*\\'\\(\\)\\,\\;\\?\\&\\=]|(?:\\%[a-fA-F0-9]{2})){1,25})?\\@)?)?"
+        + "((?:(?:[" + GOOD_IRI_CHAR_ONLY_ENG_NUM + "][" + Patterns.GOOD_IRI_CHAR + "\\-]{0,64}\\.)+" // named host
+        + Patterns.TOP_LEVEL_DOMAIN_STR_FOR_WEB_URL
+        + "|(?:(?:25[0-5]|2[0-4]" // or ip address
+        + "[0-9]|[0-1][0-9]{2}|[1-9][0-9]|[1-9])\\.(?:25[0-5]|2[0-4][0-9]"
+        + "|[0-1][0-9]{2}|[1-9][0-9]|[1-9]|0)\\.(?:25[0-5]|2[0-4][0-9]|[0-1]"
+        + "[0-9]{2}|[1-9][0-9]|[1-9]|0)\\.(?:25[0-5]|2[0-4][0-9]|[0-1][0-9]{2}"
+        + "|[1-9][0-9]|[1-9]|0))"
+        + "|(?:([0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}"// for ipv6 address
+        + "|:((:[0-9a-fA-F]{1,4}){1,6}|:)"
+        + "|[0-9a-fA-F]{1,4}:((:[0-9a-fA-F]{1,4}){1,5}|:)"
+        + "|([0-9a-fA-F]{1,4}:){2}((:[0-9a-fA-F]{1,4}){1,4}|:)"
+        + "|([0-9a-fA-F]{1,4}:){3}((:[0-9a-fA-F]{1,4}){1,3}|:)"
+        + "|([0-9a-fA-F]{1,4}:){4}((:[0-9a-fA-F]{1,4}){1,2}|:)"
+        + "|([0-9a-fA-F]{1,4}:){5}:([0-9a-fA-F]{1,4})?"
+        + "|([0-9a-fA-F]{1,4}:){6}:))"
+        + "(?:\\:\\d{1,5})?)" // plus option port number
+        + "(\\/(?:(?:[" + GOOD_IRI_CHAR_ONLY_ENG_NUM + "\\;\\/\\?\\:\\@\\&\\=\\#\\~" // plus option query params
+        + "\\-\\.\\+\\!\\*\\'\\(\\)\\,\\_])|(?:\\%[a-fA-F0-9]{2}))*)?"
+        + "(?:\\b|$|(?=[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF]))", Pattern.CASE_INSENSITIVE); // and finally, a word boundary or end of
+                        // input. This is to stop foo.sure from
+                        // matching as foo.su
+	
 
     private static int PREVIEW_ICON_WIDTH = 62;
     private static int PREVIEW_ICON_HEIGHT = 62;
@@ -117,6 +151,7 @@ public abstract class MessageViewFragmentBase extends Fragment implements View.O
     private TextView mFromAddressView;
     private TextView mDateTimeView;
     private TextView mAddressesView;
+    private TextView mClipMessage;
     private WebView mMessageContentView;
     private LinearLayout mAttachments;
     private View mTabSection;
@@ -127,6 +162,7 @@ public abstract class MessageViewFragmentBase extends Fragment implements View.O
     private View mDetailsCollapsed;
     private View mDetailsExpanded;
     private boolean mDetailsFilled;
+    protected boolean mMessageCliped;
 
     private TextView mMessageTab;
     private TextView mAttachmentTab;
@@ -145,6 +181,10 @@ public abstract class MessageViewFragmentBase extends Fragment implements View.O
     private Controller mController;
     private ControllerResultUiThreadWrapper<ControllerResults> mControllerCallback;
 
+    private static final int MSG_UPDATE_CLIP_MESSAGE = 0;
+    private static final int SEND_DELAY = 500;
+    private Handler mUpdateClipMsgHandler;
+
     // contains the HTML body. Is used by LoadAttachmentTask to display inline images.
     // is null most of the time, is used transiently to pass info to LoadAttachementTask
     private String mHtmlTextRaw;
@@ -153,6 +193,9 @@ public abstract class MessageViewFragmentBase extends Fragment implements View.O
     private String mHtmlTextWebView;
 
     private boolean mIsMessageLoadedForTest;
+
+    // whether "Always show pictures from this sender" show
+    private boolean mIsAlwaysPicturesShow;
 
     private MessageObserver mMessageObserver;
 
@@ -298,6 +341,7 @@ public abstract class MessageViewFragmentBase extends Fragment implements View.O
         mLoadingProgress = UiUtilities.getView(view, R.id.loading_progress);
         mDetailsCollapsed = UiUtilities.getView(view, R.id.sub_header_contents_collapsed);
         mDetailsExpanded = UiUtilities.getView(view, R.id.sub_header_contents_expanded);
+        mClipMessage = UiUtilities.getView(view, R.id.clip_message);
 
         mFromNameView.setOnClickListener(this);
         mFromAddressView.setOnClickListener(this);
@@ -308,6 +352,7 @@ public abstract class MessageViewFragmentBase extends Fragment implements View.O
         mAttachmentTab = UiUtilities.getView(view, R.id.show_attachments);
         mShowPicturesTab = UiUtilities.getView(view, R.id.show_pictures);
         mAlwaysShowPicturesButton = UiUtilities.getView(view, R.id.always_show_pictures_button);
+        makeVisible(mAlwaysShowPicturesButton, mIsAlwaysPicturesShow);
         // Invite is only used in MessageViewFragment, but visibility is controlled here.
         mInviteTab = UiUtilities.getView(view, R.id.show_invite);
 
@@ -322,12 +367,42 @@ public abstract class MessageViewFragmentBase extends Fragment implements View.O
         mAttachmentsScroll = UiUtilities.getView(view, R.id.attachments_scroll);
         mInviteScroll = UiUtilities.getView(view, R.id.invite_scroll);
 
+        mClipMessage.getPaint().setFlags(Paint.UNDERLINE_TEXT_FLAG);
+        mClipMessage.setOnClickListener(this);
+
+        mUpdateClipMsgHandler = new Handler() {
+            @Override
+            public void handleMessage(android.os.Message msg) {
+                if (msg.what == MSG_UPDATE_CLIP_MESSAGE) {
+                    if (mClipMessage != null) {
+                        if (mMessageCliped
+                                && mMessageContentView != null
+                                && mMessageContentView.isShown()) {
+                            mClipMessage.setVisibility(View.VISIBLE);
+                        } else {
+                            mClipMessage.setVisibility(View.GONE);
+                        }
+                    }
+                }
+            }
+        };
+		
+        mMessageContentView.addOnLayoutChangeListener(new OnLayoutChangeListener() {
+            @Override
+            public void onLayoutChange(View v, int left, int top, int right, int bottom, int oldLeft,
+                    int oldTop, int oldRight, int oldBottom) {
+                mUpdateClipMsgHandler.removeMessages(MSG_UPDATE_CLIP_MESSAGE);
+                mUpdateClipMsgHandler.sendEmptyMessageDelayed(MSG_UPDATE_CLIP_MESSAGE, SEND_DELAY);
+            }
+        });
+
         WebSettings webSettings = mMessageContentView.getSettings();
         boolean supportMultiTouch = mContext.getPackageManager()
                 .hasSystemFeature(PackageManager.FEATURE_TOUCHSCREEN_MULTITOUCH);
         webSettings.setDisplayZoomControls(!supportMultiTouch);
         webSettings.setSupportZoom(true);
         webSettings.setBuiltInZoomControls(true);
+        webSettings.setUseWideViewPort(true);
         mMessageContentView.setWebViewClient(new CustomWebViewClient());
         return view;
     }
@@ -341,7 +416,7 @@ public abstract class MessageViewFragmentBase extends Fragment implements View.O
         mController.addResultCallback(mControllerCallback);
 
         resetView();
-        new LoadMessageTask(true).executeParallel();
+        new LoadMessageTask(true, false).executeParallel();
 
         UiUtilities.installFragment(this);
     }
@@ -433,6 +508,7 @@ public abstract class MessageViewFragmentBase extends Fragment implements View.O
         super.onSaveInstanceState(outState);
         outState.putInt(BUNDLE_KEY_CURRENT_TAB, mCurrentTab);
         outState.putBoolean(BUNDLE_KEY_PICTURE_LOADED, (mTabFlags & TAB_FLAGS_PICTURE_LOADED) != 0);
+        outState.putBoolean(BUNDLE_ALWAYS_PICTURES_SHOW, mIsAlwaysPicturesShow);
     }
 
     private void restoreInstanceState(Bundle state) {
@@ -444,6 +520,7 @@ public abstract class MessageViewFragmentBase extends Fragment implements View.O
         // We'll make it current when the tab first becomes visible in updateTabs().
         mRestoredTab = state.getInt(BUNDLE_KEY_CURRENT_TAB);
         mRestoredPictureLoaded = state.getBoolean(BUNDLE_KEY_PICTURE_LOADED);
+        mIsAlwaysPicturesShow = state.getBoolean(BUNDLE_ALWAYS_PICTURES_SHOW);
     }
 
     public void setCallback(Callback callback) {
@@ -618,6 +695,7 @@ public abstract class MessageViewFragmentBase extends Fragment implements View.O
 
         makeVisible(getTabContentViewForFlag(mCurrentTab), true);
         getTabViewForFlag(mCurrentTab).setSelected(true);
+        mUpdateClipMsgHandler.sendEmptyMessage(MSG_UPDATE_CLIP_MESSAGE);
     }
 
     private View getTabViewForFlag(int tabFlag) {
@@ -779,30 +857,30 @@ public abstract class MessageViewFragmentBase extends Fragment implements View.O
                     Environment.DIRECTORY_DOWNLOADS);
             downloads.mkdirs();
             File file = Utility.createUniqueFile(downloads, attachment.mFileName);
-            Uri contentUri = AttachmentUtilities.resolveAttachmentIdToContentUri(
-                    mContext.getContentResolver(), attachmentUri);
-            InputStream in = mContext.getContentResolver().openInputStream(contentUri);
-            OutputStream out = new FileOutputStream(file);
-            IOUtils.copy(in, out);
-            out.flush();
-            out.close();
-            in.close();
-
             String absolutePath = file.getAbsolutePath();
+            if (info.mSize > 0) {
+                Uri contentUri = AttachmentUtilities.resolveAttachmentIdToContentUri(
+                        mContext.getContentResolver(), attachmentUri);
+                InputStream in = mContext.getContentResolver().openInputStream(contentUri);
+                OutputStream out = new FileOutputStream(file);
+                IOUtils.copy(in, out);
+                out.flush();
+                out.close();
+                in.close();
 
-            // Although the download manager can scan media files, scanning only happens after the
-            // user clicks on the item in the Downloads app. So, we run the attachment through
-            // the media scanner ourselves so it gets added to gallery / music immediately.
-            MediaScannerConnection.scanFile(mContext, new String[] {absolutePath},
-                    null, null);
+                // Although the download manager can scan media files, scanning only happens after the
+                // user clicks on the item in the Downloads app. So, we run the attachment through
+                // the media scanner ourselves so it gets added to gallery / music immediately.
+                MediaScannerConnection.scanFile(mContext, new String[] {absolutePath},
+                        null, null);
 
-            DownloadManager dm =
-                    (DownloadManager) getActivity().getSystemService(Context.DOWNLOAD_SERVICE);
-            dm.addCompletedDownload(info.mName, info.mName,
-                    false /* do not use media scanner */,
-                    info.mContentType, absolutePath, info.mSize,
-                    true /* show notification */);
-
+                DownloadManager dm =
+                        (DownloadManager) getActivity().getSystemService(Context.DOWNLOAD_SERVICE);
+                dm.addCompletedDownload(info.mName, info.mName,
+                        false /* do not use media scanner */,
+                        info.mContentType, absolutePath, info.mSize,
+                        true /* show notification */);
+            }
             // Cache the stored file information.
             info.setSavedPath(absolutePath);
 
@@ -838,6 +916,8 @@ public abstract class MessageViewFragmentBase extends Fragment implements View.O
         }
         try {
             Intent intent = info.getAttachmentIntent(mContext, mAccountId);
+            // Add single item flag so we don't see "surrounding" images in Gallery.
+            intent.putExtra("SingleItemOnly", true);
             startActivity(intent);
         } catch (ActivityNotFoundException e) {
             Utility.showToast(getActivity(), R.string.message_view_display_attachment_toast);
@@ -851,6 +931,11 @@ public abstract class MessageViewFragmentBase extends Fragment implements View.O
     }
 
     private void onLoadAttachment(final MessageViewAttachmentInfo attachment) {
+        // If network is not active, give user a tip.
+        if (EmailConnectivityManager.NO_ACTIVE_NETWORK == EmailConnectivityManager.getActiveNetworkType(mContext)) {
+            Utility.showToast(getActivity(), R.string.no_active_network);
+            return;
+        }
         attachment.loadButton.setVisibility(View.GONE);
         // If there's nothing in the download queue, we'll probably start right away so wait a
         // second before showing the cancel button
@@ -915,6 +1000,7 @@ public abstract class MessageViewFragmentBase extends Fragment implements View.O
             makeVisible(UiUtilities.getView(getView(), R.id.always_show_pictures_button), true);
 
             addTabFlags(TAB_FLAGS_PICTURE_LOADED);
+            mIsAlwaysPicturesShow = true;
         }
     }
 
@@ -999,6 +1085,9 @@ public abstract class MessageViewFragmentBase extends Fragment implements View.O
             case R.id.sub_header_contents_expanded:
                 hideDetails();
                 break;
+            case R.id.clip_message:
+                fetchEntireMail();
+                break;
         }
     }
 
@@ -1046,14 +1135,16 @@ public abstract class MessageViewFragmentBase extends Fragment implements View.O
     private class LoadMessageTask extends EmailAsyncTask<Void, Void, Message> {
 
         private final boolean mOkToFetch;
+        private final boolean mFromUser;
         private Mailbox mMailbox;
 
         /**
          * Special constructor to cache some local info
          */
-        public LoadMessageTask(boolean okToFetch) {
+        public LoadMessageTask(boolean okToFetch, boolean fromUser) {
             super(mTaskTracker);
             mOkToFetch = okToFetch;
+            mFromUser = fromUser;
         }
 
         @Override
@@ -1080,8 +1171,15 @@ public abstract class MessageViewFragmentBase extends Fragment implements View.O
                 return;
             }
             mMessageId = message.mId;
+            if (!FeatureQuery.FEATURE_EMAIL_SET_SYNCSIZE
+                    || (Utility.ENTIRE_MAIL == Utility.getAccountSyncSize(mContext, message.mAccountKey))
+                    || (message.mFlagLoaded == Message.FLAG_LOADED_COMPLETE)) {
+                mMessageCliped = false;
+            } else {
+                mMessageCliped = true;
+            }
 
-            reloadUiFromMessage(message, mOkToFetch);
+            reloadUiFromMessage(message, mOkToFetch, mFromUser);
             queryContactStatus();
             onMessageShown(mMessageId, mMailbox);
             RecentMailboxManager.getInstance(mContext).touch(mAccountId, message.mMailboxKey);
@@ -1206,6 +1304,9 @@ public abstract class MessageViewFragmentBase extends Fragment implements View.O
                 }
                 boolean htmlChanged = false;
                 int numDisplayedAttachments = 0;
+                // If not remove original attachments view will cause
+                // show double attachments.
+                mAttachments.removeAllViews();
                 for (Attachment attachment : attachments) {
                     if (mHtmlTextRaw != null && attachment.mContentId != null
                             && attachment.mContentUri != null) {
@@ -1428,8 +1529,14 @@ public abstract class MessageViewFragmentBase extends Fragment implements View.O
             }
             if (attachmentInfo.mAllowView) {
                 // Set the attachment action button text accordingly
+                // Some audio files MIME type is not started with "audio", such
+                // ogg with MIME type "application/ogg", so check MIME type
+                // again with MediaFile.isAudioFileType().
+                int fileType = MediaFile.getFileTypeForMimeType(attachmentInfo.mContentType);
                 if (attachmentInfo.mContentType.startsWith("audio/") ||
-                        attachmentInfo.mContentType.startsWith("video/")) {
+                        attachmentInfo.mContentType.startsWith("video/") ||
+                        MediaFile.isAudioFileType(fileType) ||
+                        MediaFile.isVideoFileType(fileType)) {
                     openButton.setText(R.string.message_view_attachment_play_action);
                 } else if (attachmentInfo.mAllowInstall) {
                     openButton.setText(R.string.message_view_attachment_install_action);
@@ -1543,7 +1650,7 @@ public abstract class MessageViewFragmentBase extends Fragment implements View.O
      * @param okToFetch If true, and message is not fully loaded, it's OK to fetch from
      * the network.  Use false to prevent looping here.
      */
-    protected void reloadUiFromMessage(Message message, boolean okToFetch) {
+    protected void reloadUiFromMessage(Message message, boolean okToFetch, boolean fetchEntireMailFromUser) {
         mMessage = message;
         mAccountId = message.mAccountKey;
 
@@ -1556,9 +1663,26 @@ public abstract class MessageViewFragmentBase extends Fragment implements View.O
         // 2. If != LOADED, ask controller to load it
         // 3. Controller callback (after loaded) should trigger LoadBodyTask & LoadAttachmentsTask
         // 4. Else start the loader tasks right away (message already loaded)
-        if (okToFetch && message.mFlagLoaded != Message.FLAG_LOADED_COMPLETE) {
+        boolean needFetchEntireMail = false;
+        if (!FeatureQuery.FEATURE_EMAIL_SET_SYNCSIZE
+                || fetchEntireMailFromUser
+                || Utility.getAccountSyncSize(mContext, mAccountId) == Utility.ENTIRE_MAIL) {
+            needFetchEntireMail = true;
+        }
+        boolean needFetchPartialMail = false;
+        if (FeatureQuery.FEATURE_EMAIL_SET_SYNCSIZE
+                && !fetchEntireMailFromUser
+                && message.mFlagLoaded != Message.FLAG_LOADED_COMPLETE
+                && message.mFlagLoaded != Message.FLAG_LOADED_SYNC_SIZE_COMPLETE) {
+            needFetchPartialMail = true;
+        }
+        if (okToFetch && needFetchEntireMail
+                && message.mFlagLoaded != Message.FLAG_LOADED_COMPLETE) {
             mControllerCallback.getWrappee().setWaitForLoadMessageId(message.mId);
-            mController.loadMessageForView(message.mId);
+            mController.loadMessageForView(message.mId, Message.FLAG_LOADED_COMPLETE);
+        } else if (okToFetch && needFetchPartialMail) {
+            mControllerCallback.getWrappee().setWaitForLoadMessageId(message.mId);
+            mController.loadMessageForView(message.mId, Message.FLAG_LOADED_SYNC_SIZE_COMPLETE);
         } else {
             Address[] fromList = Address.unpack(mMessage.mFrom);
             boolean autoShowImages = false;
@@ -1660,7 +1784,7 @@ public abstract class MessageViewFragmentBase extends Fragment implements View.O
                 // Escape any inadvertent HTML in the text message
                 text = EmailHtmlUtil.escapeCharacterToDisplay(text);
                 // Find any embedded URL's and linkify
-                Matcher m = Patterns.WEB_URL.matcher(text);
+                Matcher m = WEB_URL.matcher(text);
                 while (m.find()) {
                     int start = m.start();
                     /*
@@ -1710,6 +1834,10 @@ public abstract class MessageViewFragmentBase extends Fragment implements View.O
                 // Make sure to reset the flag -- otherwise this will keep taking effect even after
                 // moving to another message.
                 mRestoredPictureLoaded = false;
+                // If the pictures have be loaded and need not to show the
+                // pictures always form this contact, make
+                // mAlwaysShowPicturesButton visible, else make it invisible.
+                makeVisible(mAlwaysShowPicturesButton, !autoShowPictures);
             } else {
                 addTabFlags(TAB_FLAGS_HAS_PICTURES);
             }
@@ -1782,7 +1910,7 @@ public abstract class MessageViewFragmentBase extends Fragment implements View.O
                         // reload UI and reload everything else too
                         // pass false to LoadMessageTask to prevent looping here
                         cancelAllTasks();
-                        new LoadMessageTask(false).executeParallel();
+                        new LoadMessageTask(false, false).executeParallel();
                         break;
                     default:
                         // do nothing - we don't have a progress bar at this time
@@ -1939,6 +2067,7 @@ public abstract class MessageViewFragmentBase extends Fragment implements View.O
     private void setShowImagesForSender() {
         makeVisible(UiUtilities.getView(getView(), R.id.always_show_pictures_button), false);
         Utility.showToast(getActivity(), R.string.message_view_always_show_pictures_confirmation);
+        mIsAlwaysPicturesShow = false;
 
         // Force redraw of the container.
         updateTabs(mTabFlags);
@@ -1948,6 +2077,14 @@ public abstract class MessageViewFragmentBase extends Fragment implements View.O
         for (Address sender : fromList) {
             String email = sender.getAddress();
             prefs.setSenderAsTrusted(email);
+        }
+    }
+
+    public void fetchEntireMail() {
+        if (EmailConnectivityManager.NO_ACTIVE_NETWORK == EmailConnectivityManager.getActiveNetworkType(mContext)) {
+            Utility.showToast(getActivity(), R.string.no_active_network);
+        } else {
+            new LoadMessageTask(true, true).executeParallel();
         }
     }
 

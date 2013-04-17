@@ -249,6 +249,8 @@ public class AttachmentProvider extends ContentProvider {
                     new String[] {
                         Columns._ID,
                         Columns.DATA,
+                        Columns.DISPLAY_NAME,
+                        Columns.SIZE
                 };
             }
 

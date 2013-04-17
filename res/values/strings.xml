@@ -777,6 +777,15 @@ as <xliff:g id="filename">%s</xliff:g>.</string>
     <!-- Per-mailbox sync window setting.  This means "use the account's sync window setting" [CHAR LIMIT=25] -->
     <string name="account_setup_options_mail_window_default">Use account\'s default</string>
 
+    <!-- In Account setup options & Account Settings screens, Email sync size option. -->
+    <string name="account_setup_options_mail_sync_size_label">Sync size per mail</string>
+    <string name="account_setup_options_mail_sync_size_all">Sync entire mail</string>
+    <string name="account_setup_options_mail_sync_size_20k">20KB</string>
+    <string name="account_setup_options_mail_sync_size_100k">100KB</string>
+    <string name="account_setup_options_mail_sync_size_200k">200KB</string>
+    <string name="account_setup_options_mail_sync_size_500k">500KB</string>
+    <string name="account_setup_options_mail_sync_size_1M">1MB</string>
+
     <!-- "Setup could not finish" dialog text; e.g., Username or password incorrect -->
     <string name="account_setup_failed_dlg_auth_message">Username or password incorrect.</string>
     <!-- "Setup could not finish" dialog text; e.g., Username or password incorrect\n(ERR01 Account does not exist) -->
@@ -1225,4 +1234,41 @@ as <xliff:g id="filename">%s</xliff:g>.</string>
     <!-- This is the message warning the user that they must sync manually when roaming. [CHAR LIMIT=none]-->
     <string name="require_manual_sync_message">Background sync for this account is disabled while\
      roaming.</string>
+    <!-- This is the title for fetch the entire mail menu -->
+    <string name="fetch_entire_mail">Fetch entire mail</string>
+    <!-- Toast that there isn't any active network when user try to fetch entire mail -->
+    <string name="no_active_network">"There isn't any active network"</string>
+    <!-- Loading attachment progress dialog message -->
+    <string name="loading_attachments">Loading attachments</string>
+
+    <!-- Toast that appears when an attachment size is less than zero. -->
+    <string name="attachment_size_less_than_zero">The size was not measurable, and this attachment is not safe to use.</string>
+
+    <!-- Toast that appears when the network is disconnect, and user want to send the mails. -->
+    <string name="send_mail_fail_network_disconnect">"Didn't connect to network, and the mail will temporarily saved in Outbox."</string>
+
+    <!-- Toast that couldn't add the attachment -->
+    <string name="attachment_not_support">"Couldn't add this attachment."</string>
+
+    <!-- Alert the mail didn't fetch complete -->
+    <string name="clip_message">## Message clipped ## You could fetch the entire mail</string>
+
+    <!-- Alert the user, the attachment didn't download completely -->
+    <string name="alert_attachment_not_complete_title">Attachment not complete</string>
+    <string name="alert_attachment_not_complete_message">The attachment wasn\'t downloaded completely. You could choose to forward it and remove the incomplete attachment. Or you could choose to forward it automatically after downloading completely.</string>
+    <string name="alert_forward_immediately">Forward directly</string>
+    <string name="alert_forward_after_download_complete">Download then forward</string>
+    <string name="start_send_messages_notification">Sending...</string>
+    <string name="send_messages_success_notification">Send success</string>
+    <string name="send_messages_failed_notification">Send failed</string>
+
+    <!-- Toast that account description is empty, couldn't modify -->
+    <string name="account_description_modify_failed">"Account name is empty, modify the default name of account."</string>
+    <!-- Toast that account name is empty, couldn't modify -->
+    <string name="account_name_modify_failed">"Name is empty, modify the default name."</string>
+
+    <!-- This is the title for the configure email account dialog. -->
+    <string name="configure_email_dialog_title">"Configure account"</string>
+    <!-- This is the message for the configure email account dialog. -->
+    <string name="configure_email_dialog_message">"The system has no any email account, do you want to configure one?"</string>
 </resources>

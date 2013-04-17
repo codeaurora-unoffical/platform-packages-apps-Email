@@ -38,11 +38,13 @@ import android.database.MatrixCursor.RowBuilder;
 import android.database.MergeCursor;
 import android.net.Uri;
 import android.os.Bundle;
+import android.text.TextUtils;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.AdapterView.OnItemClickListener;
 import android.widget.ListView;
 import android.widget.SimpleCursorAdapter;
+import android.widget.TextView;
 
 /**
  * Fragment containing a list of accounts to show during shortcut creation.
@@ -85,7 +87,7 @@ public abstract class ShortcutPickerFragment extends ListFragment
             mCallback = (PickerCallback) activity;
         }
         final String[] fromColumns = getFromColumns();
-        mAdapter = new SimpleCursorAdapter(activity,
+        mAdapter = new MySimpleCursorAdapter(activity,
             android.R.layout.simple_expandable_list_item_1, null, fromColumns, TO_VIEWS, 0);
         setListAdapter(mAdapter);
 
@@ -109,6 +111,10 @@ public abstract class ShortcutPickerFragment extends ListFragment
     @Override
     public void onLoaderReset(Loader<Cursor> loader) {
         mAdapter.swapCursor(null);
+    }
+
+    public void reload() {
+        getLoaderManager().restartLoader(LOADER_ID, null, this);
     }
 
     /** Returns the cursor columns to map into list */
@@ -418,5 +424,51 @@ public abstract class ShortcutPickerFragment extends ListFragment
         String[] getFromColumns() {
             return MAILBOX_FROM_COLUMNS;
         }
+    }
+
+    private class MySimpleCursorAdapter extends SimpleCursorAdapter {
+        private final String MAILBOX_INBOX;
+        private final String MAILBOX_OUTBOX;
+        private final String MAILBOX_DRAFTS;
+        private final String MAILBOX_TRASH;
+        private final String MAILBOX_SENT;
+        private final String MAILBOX_JUNK;
+
+        public MySimpleCursorAdapter(Context context, int layout, Cursor c, String[] from,
+                int[] to, int flags) {
+            super(context, layout, c, from, to, flags);
+            MAILBOX_INBOX = getString(R.string.mailbox_name_server_inbox).toLowerCase();
+            MAILBOX_OUTBOX = getString(R.string.mailbox_name_server_outbox).toLowerCase();
+            MAILBOX_DRAFTS = getString(R.string.mailbox_name_server_drafts).toLowerCase();
+            MAILBOX_TRASH = getString(R.string.mailbox_name_server_trash).toLowerCase();
+            MAILBOX_SENT = getString(R.string.mailbox_name_server_sent).toLowerCase();
+            MAILBOX_JUNK = getString(R.string.mailbox_name_server_junk).toLowerCase();
+        }
+
+        @Override
+        public void setViewText(TextView v, String text) {
+            // change the default mailbox display name to the local string.
+            if (!TextUtils.isEmpty(text)) {
+                String displayName = text.toLowerCase();
+                if (displayName.equals(MAILBOX_INBOX)) {
+                    v.setText(R.string.mailbox_name_display_inbox);
+                } else if (displayName.equals(MAILBOX_OUTBOX)) {
+                    v.setText(R.string.mailbox_name_display_outbox);
+                } else if (displayName.equals(MAILBOX_DRAFTS)) {
+                    v.setText(R.string.mailbox_name_display_drafts);
+                } else if (displayName.equals(MAILBOX_TRASH)) {
+                    v.setText(R.string.mailbox_name_display_trash);
+                } else if (displayName.equals(MAILBOX_SENT)) {
+                    v.setText(R.string.mailbox_name_display_sent);
+                } else if (displayName.equals(MAILBOX_JUNK)) {
+                    v.setText(R.string.mailbox_name_display_junk);
+                } else {
+                    super.setViewText(v, text);
+                }
+            } else {
+                super.setViewText(v, text);
+            }
+        }
+
     }
 }

@@ -319,7 +319,8 @@ public final class DBHelper {
             + AccountColumns.SIGNATURE + " text, "
             + AccountColumns.POLICY_KEY + " integer, "
             + AccountColumns.NOTIFIED_MESSAGE_ID + " integer, "
-            + AccountColumns.NOTIFIED_MESSAGE_COUNT + " integer"
+            + AccountColumns.NOTIFIED_MESSAGE_COUNT + " integer, "
+            + AccountColumns.SYNC_SIZE + " integer"
             + ");";
         db.execSQL("create table " + Account.TABLE_NAME + s);
         // Deleting an account deletes associated Mailboxes and HostAuth's

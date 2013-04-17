@@ -46,6 +46,8 @@ import com.android.emailcommon.utility.IntentUtilities;
 import com.google.common.base.Preconditions;
 
 import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.Set;
 
 /**
  * The main Email activity, which is used on both the tablet and the phone.
@@ -78,6 +80,11 @@ public class EmailActivity extends Activity implements View.OnClickListener, Fra
     private BannerController mErrorBanner;
     /** Id of the account that had a messaging exception most recently. */
     private long mLastErrorAccountId;
+
+    /**
+     * Set deleted/removed message IDs.
+     */
+    private final HashSet<Long> mRemovedMsgSet = new HashSet<Long>();
 
     /**
      * Create an intent to launch and open account's inbox.
@@ -430,5 +437,9 @@ public class EmailActivity extends Activity implements View.OnClickListener, Fra
      */
     private void onFontScaleChangeDetected() {
         MessageListItem.resetDrawingCaches();
+    }
+
+    public Set<Long> getRemovedMsgSet() {
+        return mRemovedMsgSet;
     }
 }

@@ -40,6 +40,7 @@ import android.preference.RingtonePreference;
 import android.provider.ContactsContract;
 import android.text.TextUtils;
 import android.util.Log;
+import android.widget.Toast;
 
 import com.android.email.Email;
 import com.android.email.R;
@@ -52,6 +53,7 @@ import com.android.emailcommon.provider.Account;
 import com.android.emailcommon.provider.EmailContent;
 import com.android.emailcommon.provider.HostAuth;
 import com.android.emailcommon.utility.Utility;
+import com.qrd.plugin.feature_query.FeatureQuery;
 
 /**
  * Fragment containing the main logic for account settings.  This also calls out to other
@@ -96,6 +98,7 @@ public class AccountSettingsFragment extends PreferenceFragment {
     private ListPreference mSyncWindow;
     private CheckBoxPreference mAccountBackgroundAttachments;
     private CheckBoxPreference mAccountDefault;
+    private ListPreference mSyncSize;
     private CheckBoxPreference mAccountNotify;
     private CheckBoxPreference mAccountVibrate;
     private RingtonePreference mAccountRingtone;
@@ -380,6 +383,10 @@ public class AccountSettingsFragment extends PreferenceFragment {
                 public boolean onPreferenceChange(Preference preference, Object newValue) {
                     String summary = newValue.toString().trim();
                     if (TextUtils.isEmpty(summary)) {
+                        // When account description is empty, give a prompt.
+                        Toast.makeText(mContext,
+                                R.string.account_description_modify_failed,
+                                Toast.LENGTH_SHORT).show();
                         summary = mAccount.mEmailAddress;
                     }
                     mAccountDescription.setSummary(summary);
@@ -403,6 +410,11 @@ public class AccountSettingsFragment extends PreferenceFragment {
                     mAccountName.setSummary(summary);
                     mAccountName.setText(summary);
                     onPreferenceChanged(PREFERENCE_NAME, summary);
+                } else {
+                    // When account name is empty, give a prompt.
+                    Toast.makeText(mContext,
+                            R.string.account_name_modify_failed,
+                            Toast.LENGTH_SHORT).show();
                 }
                 return false;
             }
@@ -484,6 +496,31 @@ public class AccountSettingsFragment extends PreferenceFragment {
                 }
             });
             dataUsageCategory.addPreference(mSyncWindow);
+        }
+
+        // add sync size preference
+        mSyncSize = null;
+        if (FeatureQuery.FEATURE_EMAIL_SET_SYNCSIZE) {
+            mSyncSize = new ListPreference(mContext);
+            mSyncSize.setTitle(R.string.account_setup_options_mail_sync_size_label);
+            mSyncSize.setEntries(R.array.account_setup_options_mail_sync_size_entries_labels);
+            mSyncSize.setEntryValues(R.array.account_setup_options_mail_sync_size_entries_values);
+            mSyncSize.setValue(String.valueOf(mAccount.getSyncSize()));
+            mSyncSize.setSummary(mSyncSize.getEntry());
+
+            // Must correspond to the hole in the XML file that's reserved.
+            mSyncSize.setOrder(3);
+            mSyncSize.setOnPreferenceChangeListener(new Preference.OnPreferenceChangeListener() {
+                public boolean onPreferenceChange(Preference preference, Object newValue) {
+                    final String summary = newValue.toString();
+                    int index = mSyncSize.findIndexOfValue(summary);
+                    mSyncSize.setSummary(mSyncSize.getEntries()[index]);
+                    mSyncSize.setValue(summary);
+                    onPreferenceChanged(preference.getKey(), newValue);
+                    return false;
+                }
+            });
+            dataUsageCategory.addPreference(mSyncSize);
         }
 
         // Show "background attachments" for IMAP & EAS - hide it for POP3.
@@ -655,6 +692,10 @@ public class AccountSettingsFragment extends PreferenceFragment {
         if (mSyncWindow != null) {
             mAccount.setSyncLookback(Integer.parseInt(mSyncWindow.getValue()));
         }
+		if (mSyncSize != null) {
+            mAccount.setSyncSize(Integer.parseInt(mSyncSize.getValue()));
+        }
+
         if (mAccountVibrate.isChecked()) {
             newFlags |= Account.FLAGS_VIBRATE;
         }

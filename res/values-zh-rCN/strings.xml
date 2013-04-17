@@ -323,6 +323,11 @@
     <string name="account_setup_options_mail_window_1month" msgid="5846359669750047081">"一个月"</string>
     <string name="account_setup_options_mail_window_all" msgid="5372861827683632364">"全部"</string>
     <string name="account_setup_options_mail_window_default" msgid="8321351926520165832">"使用帐户的默认设置"</string>
+
+    <!-- In Account setup options & Account Settings screens, Email sync size option. -->
+    <string name="account_setup_options_mail_sync_size_label">同步每封邮件的缓存空间</string>
+    <string name="account_setup_options_mail_sync_size_all">同步整封邮件</string>
+
     <string name="account_setup_failed_dlg_auth_message" msgid="42827150104879570">"用户名或密码不正确。"</string>
     <string name="account_setup_failed_dlg_auth_message_fmt" msgid="8598560266430207606">"用户名或密码不正确。"\n"(<xliff:g id="ERROR">%s</xliff:g>)"</string>
     <string name="account_setup_failed_dlg_certificate_message" msgid="3836152264696108805">"无法安全地连接到服务器。"</string>
@@ -465,4 +470,28 @@
     <string name="search_slow_warning_message" msgid="8494483410797387903">"有些服务器可能会花费较长的时间。"</string>
     <string name="action_bar_mailbox_list_title" msgid="7484457755531286333">"文件夹"</string>
     <string name="require_manual_sync_message" msgid="7777357288642785955">"漫游时停用了此帐户的后台同步功能。"</string>
+    <string name="fetch_entire_mail">"获取整封邮件"</string>
+    <string name="no_active_network">"当前无可用网络"</string>
+    <string name="loading_attachments">"正在解析附件"</string>
+    <string name="attachment_size_less_than_zero">"无法获得文件大小，无法附加。"</string>
+    <string name="send_mail_fail_network_disconnect">"无可用的网络连接，邮件会暂时滞留发件箱"</string>
+    <string name="attachment_not_support">"无法添加该附件"</string>
+    <string name="clip_message">## 邮件被截取 ## 您可以尝试获取整封邮件</string>
+    <string name="alert_attachment_not_complete_title">附件没有完全下载</string>
+    <string name="alert_attachment_not_complete_message">"其附件没有完全下载。您可以选择不下载直接仅转发已下载内容，或者转发完整内容（应用程序会自动下载附件，并在下载完成之后转发）。"</string>
+    <string name="alert_forward_immediately">直接转发</string>
+    <string name="alert_forward_after_download_complete">下载后转发</string>
+    <string name="start_send_messages_notification">正在发送...</string>
+    <string name="send_messages_success_notification">发送成功</string>
+    <string name="send_messages_failed_notification">发送失败</string>
+
+    <!-- Toast that account description is empty, couldn't modify -->
+    <string name="account_description_modify_failed">"账户名称为空，修改为默认账户名称。"</string>
+    <!-- Toast that account name is empty, couldn't modify -->
+    <string name="account_name_modify_failed">"姓名为空，修改为默认姓名。"</string>
+
+    <!-- This is the title for the configure email account dialog. -->
+    <string name="configure_email_dialog_title">"配置账户"</string>
+    <!-- This is the message for the configure email account dialog. -->
+    <string name="configure_email_dialog_message">"系统没有任何电子邮件帐户，您要配置一个吗？"</string>
 </resources>

@@ -41,13 +41,17 @@ import com.android.emailcommon.provider.EmailContent.Message;
 import com.android.emailcommon.provider.Mailbox;
 import com.android.emailcommon.service.EmailServiceConstants;
 import com.android.emailcommon.utility.Utility;
+import com.qrd.plugin.feature_query.FeatureQuery;
+
+import java.util.Set;
 
 /**
  * A {@link MessageViewFragmentBase} subclass for regular email messages.  (regular as in "not eml
  * files").
  */
 public class MessageViewFragment extends MessageViewFragmentBase
-        implements MoveMessageToDialog.Callback, OnMenuItemClickListener {
+        implements MoveMessageToDialog.Callback, OnMenuItemClickListener,
+        DeleteMessageConfirmationDialog.Callback {
     /** Argument name(s) */
     private static final String ARG_MESSAGE_ID = "messageId";
 
@@ -59,6 +63,7 @@ public class MessageViewFragment extends MessageViewFragmentBase
 
     /* Nullable - not available on phone portrait. */
     private View mForwardButton;
+    private View mFetchEntireMailButton;
 
     private View mMoreButton;
 
@@ -214,6 +219,7 @@ public class MessageViewFragment extends MessageViewFragmentBase
         mReplyButton = UiUtilities.getView(view, R.id.reply);
         mReplyAllButton = UiUtilities.getView(view, R.id.reply_all);
         mForwardButton = UiUtilities.getViewOrNull(view, R.id.forward);
+        mFetchEntireMailButton = UiUtilities.getViewOrNull(view, R.id.fetch_entire_mail);
         mMeetingYes = UiUtilities.getView(view, R.id.accept);
         mMeetingMaybe = UiUtilities.getView(view, R.id.maybe);
         mMeetingNo = UiUtilities.getView(view, R.id.decline);
@@ -227,6 +233,9 @@ public class MessageViewFragment extends MessageViewFragmentBase
         }
         if (mForwardButton != null) {
             mForwardButton.setOnClickListener(this);
+        }
+        if (mFetchEntireMailButton != null) {
+            mFetchEntireMailButton.setOnClickListener(this);
         }
         mMeetingYes.setOnClickListener(this);
         mMeetingMaybe.setOnClickListener(this);
@@ -307,6 +316,15 @@ public class MessageViewFragment extends MessageViewFragmentBase
 
         // Disable forward/reply buttons as necessary.
         enableReplyForwardButtons(Mailbox.isMailboxTypeReplyAndForwardable(mailbox.mType));
+
+        // update the fetch entire mail button status.
+        if (mFetchEntireMailButton != null) {
+            if (mMessageCliped) {
+                mFetchEntireMailButton.setVisibility(View.VISIBLE);
+            } else {
+                mFetchEntireMailButton.setVisibility(View.GONE);
+            }
+        }
     }
 
     /**
@@ -429,11 +447,17 @@ public class MessageViewFragment extends MessageViewFragmentBase
 
                 // Remove Reply if ReplyAll icon is visible or vice versa
                 menu.removeItem(mDefaultReplyAll ? R.id.reply_all : R.id.reply);
+                if (!mMessageCliped) {
+                    menu.removeItem(R.id.fetch_entire_mail);
+                }
+
                 popup.setOnMenuItemClickListener(this);
                 popup.show();
                 break;
             }
-
+            case R.id.fetch_entire_mail:
+                fetchEntireMail();
+                return;
         }
         super.onClick(view);
     }
@@ -451,6 +475,9 @@ public class MessageViewFragment extends MessageViewFragmentBase
                 case R.id.forward:
                     mCallback.onForward();
                     return true;
+                case R.id.fetch_entire_mail:
+                    fetchEntireMail();
+                    return true;
             }
         }
         return false;
@@ -464,7 +491,15 @@ public class MessageViewFragment extends MessageViewFragmentBase
                 onMove();
                 return true;
             case R.id.delete:
-                onDelete();
+                if (FeatureQuery.FEATURE_EMAIL_DELETE_PROMPT) {
+                    DeleteMessageConfirmationDialog dialog = DeleteMessageConfirmationDialog
+                            .newInstance(1, null);
+                    dialog.setTargetFragment(MessageViewFragment.this, 0);
+                    dialog.setCancelable(true);
+                    dialog.show(getFragmentManager(), "dialog");
+                } else {
+                    onDelete();
+                }
                 return true;
             case R.id.mark_as_unread:
                 onMarkAsUnread();
@@ -482,13 +517,30 @@ public class MessageViewFragment extends MessageViewFragmentBase
     // MoveMessageToDialog$Callback
     @Override
     public void onMoveToMailboxSelected(long newMailboxId, long[] messageIds) {
+        addRemovedId(messageIds);
         mCallback.onBeforeMessageGone();
         ActivityHelper.moveMessages(mContext, newMailboxId, messageIds);
     }
 
     private void onDelete() {
+        addRemovedId(new long[] { getMessageId() });
         mCallback.onBeforeMessageGone();
         ActivityHelper.deleteMessage(mContext, getMessageId());
+    }
+
+    /**
+     * Add the need to removed message's id in a Set, we need remove them when
+     * user return to message list UI.
+     */
+    private void addRemovedId(long[] messageIds) {
+        Activity activity = getActivity();
+        if (activity != null && activity instanceof EmailActivity) {
+            Set<Long> removedSet = ((EmailActivity) activity)
+                    .getRemovedMsgSet();
+            for (long id : messageIds) {
+                removedSet.add(id);
+            }
+        }
     }
 
     private void onMarkAsUnread() {
@@ -519,5 +571,10 @@ public class MessageViewFragment extends MessageViewFragmentBase
         if ((message.mFlags & Message.FLAG_INCOMING_MEETING_INVITE) != 0) {
             addTabFlags(TAB_FLAGS_HAS_INVITE);
         }
+    }
+
+    @Override
+    public void onDeleteMessageConfirmationDialogOkPressed() {
+        onDelete();
     }
 }
