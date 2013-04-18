@@ -647,6 +647,7 @@ public class Pop3Store extends Store {
             for (Message message : messages) {
                 uids.add(message.getUid());
             }
+            int syncSize = messages[0].getNeedSyncSize();
             try {
                 indexUids(uids);
                 if (fp.contains(FetchProfile.Item.ENVELOPE)) {
@@ -676,8 +677,19 @@ public class Pop3Store extends Store {
                          * To convert the suggested download size we take the size
                          * divided by the maximum line size (76).
                          */
-                        fetchBody(pop3Message,
-                                FETCH_BODY_SANE_SUGGESTED_SIZE / 76);
+                        int lines = -1;
+                        if (true) {
+                            if (syncSize != Utility.ENTIRE_MAIL) {
+                                // syncSize == Utility.ENTIRE_MAIL couldn't be here
+                                lines = syncSize / 76;
+                            } else {
+                                Log.w(Logging.LOG_TAG, "Pop3 fetch message with fetch field :"
+                                        + "BODY_SANE, but this account need sync entire mail.");
+                            }
+                        } else {
+                            lines = FETCH_BODY_SANE_SUGGESTED_SIZE / 76;
+                        }
+                        fetchBody(pop3Message, lines);
                     }
                     else if (fp.contains(FetchProfile.Item.STRUCTURE)) {
                         /*
