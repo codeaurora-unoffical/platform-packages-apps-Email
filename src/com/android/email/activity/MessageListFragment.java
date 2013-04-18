@@ -1075,6 +1075,9 @@ public class MessageListFragment extends ListFragment
      * Note we do this even if it's a push account; even on Exchange only inbox can be pushed.
      */
     private void autoRefreshStaleMailbox() {
+    	//Check the Account status 
+    	if(mAccount == null)
+			return;
         //Check the status of mSyncInterval and MailboxType, if NEVER and INBOX, we do not need to refresh the mailbox.
         if((mAccount.mSyncInterval == Mailbox.CHECK_INTERVAL_NEVER) && (Mailbox.getMailboxType(mActivity, getMailboxId()) == Mailbox.TYPE_INBOX))
             return;
