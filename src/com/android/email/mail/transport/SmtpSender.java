@@ -82,7 +82,7 @@ public class SmtpSender extends Sender {
         if (sendAuth.mPort != HostAuth.PORT_UNKNOWN) {
             port = sendAuth.mPort;
         }
-        mTransport = new MailTransport("IMAP");
+        mTransport = new MailTransport("IMAP", mContext);
         mTransport.setHost(sendAuth.mAddress);
         mTransport.setPort(port);
         mTransport.setSecurity(connectionSecurity, trustCertificates);
@@ -107,6 +107,7 @@ public class SmtpSender extends Sender {
     public void open() throws MessagingException {
         try {
             mTransport.open();
+            mTransport.setSoTimeout(MailTransport.SOCKET_READ_TIMEOUT);
 
             // Eat the banner
             executeSimpleCommand(null);

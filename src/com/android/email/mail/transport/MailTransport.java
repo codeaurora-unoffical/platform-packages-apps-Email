@@ -17,12 +17,15 @@
 package com.android.email.mail.transport;
 
 import com.android.email.Email;
+import com.android.email.EmailConnectivityManager;
 import com.android.email.mail.Transport;
 import com.android.emailcommon.Logging;
 import com.android.emailcommon.mail.CertificateValidationException;
 import com.android.emailcommon.mail.MessagingException;
 import com.android.emailcommon.utility.SSLUtils;
 
+import android.content.Context;
+import android.net.ConnectivityManager;
 import android.util.Log;
 
 import java.io.BufferedInputStream;
@@ -77,14 +80,17 @@ public class MailTransport implements Transport {
     private InputStream mIn;
     private OutputStream mOut;
 
+    private Context mContext;
+
     /**
      * Simple constructor for starting from scratch.  Call setUri() and setSecurity() to
      * complete the configuration.
      * @param debugLabel Label used for Log.d calls
      */
-    public MailTransport(String debugLabel) {
+    public MailTransport(String debugLabel, Context context) {
         super();
         mDebugLabel = debugLabel;
+        mContext = context;
     }
 
     /**
@@ -94,7 +100,7 @@ public class MailTransport implements Transport {
      */
     @Override
     public Transport clone() {
-        MailTransport newObject = new MailTransport(mDebugLabel);
+        MailTransport newObject = new MailTransport(mDebugLabel, mContext);
 
         newObject.mDebugLabel = mDebugLabel;
         newObject.mHost = mHost;
@@ -168,11 +174,18 @@ public class MailTransport implements Transport {
             SocketAddress socketAddress = new InetSocketAddress(getHost(), getPort());
             if (canTrySslSecurity()) {
                 mSocket = SSLUtils.getSSLSocketFactory(
-                        canTrustAllCertificates(), SOCKET_CONNECT_TIMEOUT).createSocket();
+                        canTrustAllCertificates(), 0/*SOCKET_CONNECT_TIMEOUT*/).createSocket();
             } else {
                 mSocket = new Socket();
             }
-            mSocket.connect(socketAddress, SOCKET_CONNECT_TIMEOUT);
+            // Use 60s as socket timeout value when the network type isn't Wifi.
+            int netWorkType = EmailConnectivityManager.getActiveNetworkType(mContext);
+            if (ConnectivityManager.TYPE_WIFI == netWorkType
+                    || EmailConnectivityManager.NO_ACTIVE_NETWORK == netWorkType) {
+                mSocket.connect(socketAddress, SOCKET_CONNECT_TIMEOUT);
+            } else {
+                mSocket.connect(socketAddress, SOCKET_READ_TIMEOUT);
+            }
             // After the socket connects to an SSL server, confirm that the hostname is as expected
             if (canTrySslSecurity() && !canTrustAllCertificates()) {
                 verifyHostname(mSocket, getHost());
@@ -205,7 +218,7 @@ public class MailTransport implements Transport {
     public void reopenTls() throws MessagingException {
         try {
             mSocket =
-                    SSLUtils.getSSLSocketFactory(canTrustAllCertificates(), SOCKET_CONNECT_TIMEOUT)
+                    SSLUtils.getSSLSocketFactory(canTrustAllCertificates(), 0/*SOCKET_CONNECT_TIMEOUT*/)
                             .createSocket(mSocket, getHost(), getPort(), true);
             mSocket.setSoTimeout(SOCKET_READ_TIMEOUT);
             mIn = new BufferedInputStream(mSocket.getInputStream(), 1024);

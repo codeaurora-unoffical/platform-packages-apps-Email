@@ -125,7 +125,7 @@ public class ImapStore extends Store {
         if (recvAuth.mPort != HostAuth.PORT_UNKNOWN) {
             port = recvAuth.mPort;
         }
-        mTransport = new MailTransport("IMAP");
+        mTransport = new MailTransport("IMAP", mContext);
         mTransport.setHost(recvAuth.mAddress);
         mTransport.setPort(port);
         mTransport.setSecurity(connectionSecurity, trustCertificates);

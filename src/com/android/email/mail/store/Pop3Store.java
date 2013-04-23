@@ -121,7 +121,7 @@ public class Pop3Store extends Store {
         if (recvAuth.mPort != HostAuth.PORT_UNKNOWN) {
             port = recvAuth.mPort;
         }
-        mTransport = new MailTransport("POP3");
+        mTransport = new MailTransport("POP3", mContext);
         mTransport.setHost(recvAuth.mAddress);
         mTransport.setPort(port);
         mTransport.setSecurity(connectionSecurity, trustCertificates);
@@ -270,7 +270,7 @@ public class Pop3Store extends Store {
 
             try {
                 mTransport.open();
-
+                mTransport.setSoTimeout(MailTransport.SOCKET_READ_TIMEOUT);
                 // Eat the banner
                 executeSimpleCommand(null);
 
