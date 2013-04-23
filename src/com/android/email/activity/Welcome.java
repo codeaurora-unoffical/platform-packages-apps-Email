@@ -286,10 +286,14 @@ public class Welcome extends Activity {
         mInboxFinder.startLookup();
 
         // Show "your email will appear shortly" message.
-        mWaitingForSyncView = LayoutInflater.from(this).inflate(
+        View waitingForSyncView = LayoutInflater.from(this).inflate(
                 R.layout.waiting_for_sync_message, null);
-        addContentView(mWaitingForSyncView, new LayoutParams(
+        addContentView(waitingForSyncView, new LayoutParams(
                 LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT));
+        if (mWaitingForSyncView == null) {
+            mWaitingForSyncView = waitingForSyncView;
+            mWaitingForSyncView.setVisibility(View.VISIBLE);
+        }
         invalidateOptionsMenu();
     }
 
