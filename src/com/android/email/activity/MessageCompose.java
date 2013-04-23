@@ -1475,8 +1475,6 @@ public class MessageCompose extends Activity implements OnClickListener, OnFocus
                 getAddresses(mCcView).length == 0 &&
                 getAddresses(mBccView).length == 0) {
             mToView.setError(getString(R.string.message_compose_error_no_recipients));
-            Toast.makeText(this, getString(R.string.message_compose_error_no_recipients),
-                    Toast.LENGTH_LONG).show();
         } else {
             sendOrSaveMessage(true);
             setMessageChanged(false);
