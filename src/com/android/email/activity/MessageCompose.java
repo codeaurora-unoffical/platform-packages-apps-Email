@@ -433,12 +433,12 @@ public class MessageCompose extends Activity implements OnClickListener, OnFocus
                 || ACTION_FORWARD.equals(mAction)) {
             long sourceMessageId = getIntent().getLongExtra(EXTRA_MESSAGE_ID, Message.NOT_SAVED);
             loadSourceMessage(sourceMessageId, true);
-
+            setMessageChanged(true);
         } else if (ACTION_EDIT_DRAFT.equals(mAction)) {
             // Assert getIntent.hasExtra(EXTRA_MESSAGE_ID)
             long draftId = getIntent().getLongExtra(EXTRA_MESSAGE_ID, Message.NOT_SAVED);
             resumeDraft(draftId, null, true /* restore views */);
-
+            setMessageChanged(true);
         } else {
             // Normal compose flow for a new message.
             setAccount(intent);
@@ -515,12 +515,6 @@ public class MessageCompose extends Activity implements OnClickListener, OnFocus
         }
     }
 
-    @Override
-    public void onPause() {
-        super.onPause();
-        saveIfNeeded();
-    }
-
     /**
      * We override onDestroy to make sure that the WebView gets explicitly destroyed.
      * Otherwise it can leak native references.
@@ -528,6 +522,9 @@ public class MessageCompose extends Activity implements OnClickListener, OnFocus
     @Override
     public void onDestroy() {
         super.onDestroy();
+        // Save the draft if need.
+        saveIfNeeded();
+
         mQuotedText.destroy();
         mQuotedText = null;
 
@@ -863,6 +860,9 @@ public class MessageCompose extends Activity implements OnClickListener, OnFocus
                         for (Attachment attachment: attachments) {
                             addAttachment(attachment);
                         }
+                        if (!mAttachments.isEmpty()) {
+                            setMessageChanged(true);
+                        }
                     }
                 });
 
@@ -900,7 +900,6 @@ public class MessageCompose extends Activity implements OnClickListener, OnFocus
             showCcBccFieldsIfFilled();
             setNewMessageFocus();
         }
-        setMessageChanged(false);
 
         // The quoted text must always be restored.
         displayQuotedText(message.mTextReply, message.mHtmlReply);
