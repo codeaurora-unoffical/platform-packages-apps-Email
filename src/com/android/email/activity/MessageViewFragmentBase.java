@@ -402,7 +402,7 @@ public abstract class MessageViewFragmentBase extends Fragment implements View.O
         webSettings.setDisplayZoomControls(!supportMultiTouch);
         webSettings.setSupportZoom(true);
         webSettings.setBuiltInZoomControls(true);
-        webSettings.setUseWideViewPort(true);
+        //webSettings.setUseWideViewPort(true);//not need to set wide view
         mMessageContentView.setWebViewClient(new CustomWebViewClient());
         return view;
     }
