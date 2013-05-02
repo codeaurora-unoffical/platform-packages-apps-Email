@@ -283,11 +283,7 @@ public class MessageCompose extends Activity implements OnClickListener, OnFocus
                 return;
             }
 
-            // If the mProgressDialog is null or it has not been attached to
-            // current activity, return immediately.
-            if (mProgressDialog == null || mProgressDialog.getFragmentManager() == null) {
-                return;
-            }
+            if (mProgressDialog == null) return;
             if (msg.what == MSG_UPDATE_ATTACHMENT_UI_START) {
                 mProgressDialog.show(getFragmentManager(), "dialog");
             } else if (msg.what == MSG_UPDATE_ATTACHMENT_UI_FINISH) {
@@ -1004,17 +1000,10 @@ public class MessageCompose extends Activity implements OnClickListener, OnFocus
                 loadAttachments(message.mId, mAccount, new AttachmentLoadedCallback() {
                     @Override
                     public void onAttachmentLoaded(Attachment[] attachments) {
-                        //M: add the attachment from draft
-						/*
                         final AddAttachmentThread thread = new AddAttachmentThread();
                         mProgressDialog = MyProgressDialog.newInstance(R.string.loading_attachments, thread);
                         thread.setAttachments(attachments);
                         thread.start();
-						*/
-						for (Attachment attachment: attachments) {
-                            addAttachment(attachment, true);
-                        }
-						//end
                     }
                 });
 
