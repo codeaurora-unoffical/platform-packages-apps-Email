@@ -428,6 +428,9 @@ public class MessageCompose extends Activity implements OnClickListener, OnFocus
             initFromIntent(intent);
             setMessageChanged(true);
             setMessageLoaded(true);
+            // If by sharing way to start email, we can be regarded as a special
+            // form of compose mail. So we can set mInitiallyEmpty is true.
+            mInitiallyEmpty = true;
         } else if (ACTION_REPLY.equals(mAction)
                 || ACTION_REPLY_ALL.equals(mAction)
                 || ACTION_FORWARD.equals(mAction)) {
@@ -1552,7 +1555,11 @@ public class MessageCompose extends Activity implements OnClickListener, OnFocus
         Intent i = new Intent(Intent.ACTION_GET_CONTENT);
         i.addCategory(Intent.CATEGORY_OPENABLE);
         i.addFlags(Intent.FLAG_ACTIVITY_CLEAR_WHEN_TASK_RESET);
-        i.setType(AttachmentUtilities.ACCEPTABLE_ATTACHMENT_SEND_UI_TYPES[0]);
+        if (true) {
+            i.setType(AttachmentUtilities.ACCEPTABLE_ATTACHMENT_SEND_INTENT_TYPES[0]);
+        } else {
+            i.setType(AttachmentUtilities.ACCEPTABLE_ATTACHMENT_SEND_UI_TYPES[0]);
+        }
         mPickingAttachment = true;
         startActivityForResult(
                 Intent.createChooser(i, getString(R.string.choose_attachment_dialog_title)),
