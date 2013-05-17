@@ -122,13 +122,16 @@ public abstract class ServiceProxy {
             // This is harmless, but we've got to catch it
         }
 
-        mDead = true;
+        /** Modified: Sometimes notify may run early than wait.
+         *  So we use mDead to check the synchronize state @{ */
         synchronized(mConnection) {
             if (DEBUG_PROXY) {
                 Log.v(mTag, "Task " + mName + " completed; disconnecting");
             }
             mConnection.notify();
+            mDead = true;
         }
+        /** end */
     }
 
     private void runTask() {
@@ -164,7 +167,12 @@ public abstract class ServiceProxy {
                 if (DEBUG_PROXY) {
                     Log.v(mTag, "Waiting for task " + mName + " to complete...");
                 }
-                mConnection.wait(mTimeout * 1000L);
+                /** Modified: Sometimes notify may run early than wait.
+                 *  So we use mDead to check the synchronize state @{ */
+                if (!mDead) {
+                    mConnection.wait(mTimeout * 1000L);
+                }
+                /** end */
             } catch (InterruptedException e) {
                 // Can be ignored safely
             }
