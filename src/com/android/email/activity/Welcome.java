@@ -52,6 +52,8 @@ import com.android.emailcommon.utility.IntentUtilities;
 import com.android.emailcommon.utility.Utility;
 import com.google.common.annotations.VisibleForTesting;
 
+import android.os.Debug;
+
 /**
  * The Welcome activity initializes the application and starts {@link EmailActivity}, or launch
  * {@link AccountSetupBasics} if no accounts are configured.
@@ -180,6 +182,9 @@ public class Welcome extends Activity {
 
     @Override
     public void onCreate(Bundle icicle) {
+    	//Debug.startMethodTracing("Tracelog");
+		//Log.d(Logging.LOG_TAG, this + " onCreate start");
+		
         super.onCreate(icicle);
         ActivityHelper.debugSetWindowFlags(this);
 
@@ -188,7 +193,7 @@ public class Welcome extends Activity {
         // already been started
         // When the service starts, it reconciles EAS accounts.
         // TODO More completely separate ExchangeService from Email app
-        EmailServiceUtils.startExchangeService(this);
+        //EmailServiceUtils.startExchangeService(this);//song_l
 
         // Extract parameters from the intent.
         final Intent intent = getIntent();
@@ -202,6 +207,8 @@ public class Welcome extends Activity {
         EmailAsyncTask.runAsyncParallel(new Runnable() {
             @Override
             public void run() {
+            	//Debug.startMethodTracing("Tracelog");
+            	EmailServiceUtils.startExchangeService(Welcome.this);//song_l
                 // Reconciling can be heavy - so do it in the background.
                 if (MailService.hasMismatchInPopImapAccounts(Welcome.this)) {
                     MailService.reconcilePopImapAccountsSync(Welcome.this);
@@ -209,13 +216,19 @@ public class Welcome extends Activity {
                 Welcome.this.runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
+                    //Debug.startMethodTracing("Tracelog");
                         resolveAccount();
+					//Debug.stopMethodTracing();		
                     }});
+				//Debug.stopMethodTracing();	
             }
         });
 
         // Reset the "accounts changed" notification, now that we're here
         Email.setNotifyUiAccountsChanged(false);
+
+		//Log.d(Logging.LOG_TAG, this + " onCreate stop");
+		//Debug.stopMethodTracing();
     }
 
     @Override
@@ -371,10 +384,14 @@ public class Welcome extends Activity {
                 UiUtilities.setNeededMsgComp(true, intent);
                 // If has no email account when share by email in other apps, it
                 // will show pop-up to indicate config new account.
-                ConfigureAccountFragment dialogFragment = ConfigureAccountFragment
-                        .newInstance();
-                dialogFragment.show(getFragmentManager(),
-                        ConfigureAccountFragment.TAG);
+                try{
+                    ConfigureAccountFragment dialogFragment = ConfigureAccountFragment
+                            .newInstance();
+                    dialogFragment.show(getFragmentManager(),
+                            ConfigureAccountFragment.TAG);
+                }catch (Exception e) {
+                	return;
+                }
             } else {
                 UiUtilities.setNeededMsgComp(false, null);    // reset the value.
                 AccountSetupBasics.actionNewAccount(this);
