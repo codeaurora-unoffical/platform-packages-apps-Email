@@ -371,10 +371,14 @@ public class Welcome extends Activity {
                 UiUtilities.setNeededMsgComp(true, intent);
                 // If has no email account when share by email in other apps, it
                 // will show pop-up to indicate config new account.
-                ConfigureAccountFragment dialogFragment = ConfigureAccountFragment
-                        .newInstance();
-                dialogFragment.show(getFragmentManager(),
-                        ConfigureAccountFragment.TAG);
+                try{
+                    ConfigureAccountFragment dialogFragment = ConfigureAccountFragment
+                            .newInstance();
+                    dialogFragment.show(getFragmentManager(),
+                            ConfigureAccountFragment.TAG);
+                }catch (Exception e) {
+                	return;
+                }
             } else {
                 UiUtilities.setNeededMsgComp(false, null);    // reset the value.
                 AccountSetupBasics.actionNewAccount(this);
