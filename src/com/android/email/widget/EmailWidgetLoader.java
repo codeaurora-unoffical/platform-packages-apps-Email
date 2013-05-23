@@ -144,7 +144,20 @@ class EmailWidgetLoader extends ThrottlingCursorLoader {
         if (mMailboxId > 0) {
             Mailbox mailbox = Mailbox.restoreMailboxWithId(mContext, mMailboxId);
             if (mailbox != null) {
-                mailboxName = mailbox.mDisplayName;    // regular mailbox
+				//Modified for mailboxName translation
+				if(mailbox.mType == Mailbox.TYPE_INBOX)
+					mailboxName = mContext.getString(R.string.mailbox_name_display_inbox);
+				else if(mailbox.mType == Mailbox.TYPE_OUTBOX)
+					mailboxName = mContext.getString(R.string.mailbox_name_display_outbox);				
+				else if(mailbox.mType == Mailbox.TYPE_DRAFTS)
+					mailboxName = mContext.getString(R.string.mailbox_name_display_drafts);				
+				else if(mailbox.mType == Mailbox.TYPE_TRASH)
+					mailboxName = mContext.getString(R.string.mailbox_name_display_trash);				
+				else if(mailbox.mType == Mailbox.TYPE_SENT)
+					mailboxName = mContext.getString(R.string.mailbox_name_display_sent);
+				else
+                	mailboxName = mailbox.mDisplayName;    // regular mailbox
+                //end	
             } else {
                 // TODO What use here? "unknown"? Mailbox is "real", but, doesn't exist.
                 mailboxName = null;
