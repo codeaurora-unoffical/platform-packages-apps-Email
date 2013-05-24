@@ -1779,11 +1779,23 @@ public abstract class MessageViewFragmentBase extends Fragment implements View.O
             /*
              * Convert the plain text to HTML
              */
-            StringBuffer sb = new StringBuffer("<html><body>");
+            StringBuffer sbTel = new StringBuffer("<html><body>");
+			StringBuffer sb = new StringBuffer("");
             if (text != null) {
                 // Escape any inadvertent HTML in the text message
                 text = EmailHtmlUtil.escapeCharacterToDisplay(text);
+				
+				// Find any embedded Phone's and linkify
+                Matcher mTel = Patterns.PHONE.matcher(text);
+				while (mTel.find()) {
+					String number = mTel.group();
+                    String ref = String.format("<a href=\"tel:%s\">%s</a>", number, number);
+                    mTel.appendReplacement(sbTel, ref);
+				}
+				mTel.appendTail(sbTel);   
+				
                 // Find any embedded URL's and linkify
+                text = sbTel.toString();
                 Matcher m = WEB_URL.matcher(text);
                 while (m.find()) {
                     int start = m.start();
