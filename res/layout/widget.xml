@@ -92,14 +92,15 @@
         android:id="@+id/tap_to_configure"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginLeft="5dip"
-        android:layout_marginRight="5dip"
         android:layout_weight="1"
         android:layout_gravity="fill"
         android:gravity="center"
         android:text="@string/widget_touch_to_configure"
         android:textSize="16sp"
-        android:visibility="gone"/>
+        android:visibility="gone"
+        android:background="@drawable/gradient_bg_email_widget_holo"
+        android:textColor="@color/text_primary_color"/>
+        
     <ImageView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
