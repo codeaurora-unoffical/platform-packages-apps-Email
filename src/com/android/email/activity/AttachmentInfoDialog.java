@@ -44,9 +44,9 @@ public class AttachmentInfoDialog extends DialogFragment {
      */
     public static AttachmentInfoDialog newInstance(Context context, int denyFlags) {
         Resources res = context.getResources();
-        String title = res.getString(R.string.attachment_info_dialog_default_title);
-        String bodyText = res.getString(R.string.attachment_info_unknown);
-        String actionText = null;
+        int title = R.string.attachment_info_dialog_default_title;
+        int bodyText = R.string.attachment_info_unknown;
+        int actionText = 0;
         Intent actionIntent = null;
 
         // NOTE: Order here matters. There can be multiple reasons for denying an attachment,
@@ -54,32 +54,32 @@ public class AttachmentInfoDialog extends DialogFragment {
         // user to connect to wi-fi to download a 30mb attachment that is suspected of being
         // malware).
         if ((denyFlags & AttachmentInfo.DENY_MALWARE) != 0) {
-            bodyText = res.getString(R.string.attachment_info_malware);
+            bodyText = R.string.attachment_info_malware;
         } else if ((denyFlags & AttachmentInfo.DENY_POLICY) != 0) {
-            bodyText = res.getString(R.string.attachment_info_policy);
+            bodyText = R.string.attachment_info_policy;
         } else if ((denyFlags & AttachmentInfo.DENY_NOINTENT) != 0) {
-            bodyText = res.getString(R.string.attachment_info_no_intent);
+            bodyText = R.string.attachment_info_no_intent;
         } else if ((denyFlags & AttachmentInfo.DENY_NOSIDELOAD) != 0) {
-            bodyText = res.getString(R.string.attachment_info_sideload_disabled);
-            actionText = res.getString(R.string.attachment_info_application_settings);
+            bodyText = R.string.attachment_info_sideload_disabled;
+            actionText = R.string.attachment_info_application_settings;
             actionIntent = new Intent(Settings.ACTION_SECURITY_SETTINGS);
             actionIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             actionIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK);
         } else if ((denyFlags & AttachmentInfo.DENY_APKINSTALL) != 0) {
-            bodyText = res.getString(R.string.attachment_info_apk_install_disabled);
+            bodyText = R.string.attachment_info_apk_install_disabled;
         } else if ((denyFlags & AttachmentInfo.DENY_WIFIONLY) != 0) {
-            title = res.getString(R.string.attachment_info_dialog_wifi_title);
-            bodyText = res.getString(R.string.attachment_info_wifi_only);
-            actionText = res.getString(R.string.attachment_info_wifi_settings);
+            title = R.string.attachment_info_dialog_wifi_title;
+            bodyText = R.string.attachment_info_wifi_only;
+            actionText = R.string.attachment_info_wifi_settings;
             actionIntent = new Intent(Settings.ACTION_WIFI_SETTINGS);
             actionIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             actionIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK);
         }
         AttachmentInfoDialog dialog = new AttachmentInfoDialog();
         Bundle args = new Bundle();
-        args.putString(BUNDLE_TITLE, title);
-        args.putString(BUNDLE_BODY_TEXT, bodyText);
-        args.putString(BUNDLE_ACTION_TEXT, actionText);
+        args.putInt(BUNDLE_TITLE, title);
+        args.putInt(BUNDLE_BODY_TEXT, bodyText);
+        args.putInt(BUNDLE_ACTION_TEXT, actionText);
         args.putParcelable(BUNDLE_ACTION_INTENT, actionIntent);
         dialog.setArguments(args);
         return dialog;
@@ -89,9 +89,9 @@ public class AttachmentInfoDialog extends DialogFragment {
     public Dialog onCreateDialog(Bundle savedInstanceState) {
         Bundle args = getArguments();
         Context context = getActivity();
-        String title = args.getString(BUNDLE_TITLE);
-        String infoText = args.getString(BUNDLE_BODY_TEXT);
-        String actionText = args.getString(BUNDLE_ACTION_TEXT);
+        int title = args.getInt(BUNDLE_TITLE);
+        int infoText = args.getInt(BUNDLE_BODY_TEXT);
+        int actionText = args.getInt(BUNDLE_ACTION_TEXT);
         final Intent actionIntent = args.getParcelable(BUNDLE_ACTION_INTENT);
 
         OnClickListener onClickListener = new OnClickListener() {
@@ -112,7 +112,7 @@ public class AttachmentInfoDialog extends DialogFragment {
         builder.setTitle(title);
         builder.setMessage(infoText);
         builder.setNeutralButton(R.string.okay_action, onClickListener);
-        if (actionText != null && actionIntent != null) {
+        if (actionText != 0 && actionIntent != null) {
             builder.setPositiveButton(actionText, onClickListener);
         }
         return builder.show();
