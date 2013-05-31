@@ -1,5 +1,7 @@
 /*
  * Copyright (C) 2010 The Android Open Source Project
+ * Copyright (c) 2013, The Linux Foundation. All rights reserved.
+ * Not a Contribution.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -32,6 +34,7 @@ import android.database.ContentObserver;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Paint;
+import android.media.MediaFile;
 import android.media.MediaScannerConnection;
 import android.net.Uri;
 import android.os.Bundle;
@@ -1481,8 +1484,14 @@ public abstract class MessageViewFragmentBase extends Fragment implements View.O
             }
             if (attachmentInfo.mAllowView) {
                 // Set the attachment action button text accordingly
+                // Some audio files MIME type is not started with "audio", such
+                // ogg with MIME type "application/ogg", so check MIME type
+                // again with MediaFile.isAudioFileType().
+                int fileType = MediaFile.getFileTypeForMimeType(attachmentInfo.mContentType);
                 if (attachmentInfo.mContentType.startsWith("audio/") ||
-                        attachmentInfo.mContentType.startsWith("video/")) {
+                        attachmentInfo.mContentType.startsWith("video/") ||
+                        MediaFile.isAudioFileType(fileType) ||
+                        MediaFile.isVideoFileType(fileType)) {
                     openButton.setText(R.string.message_view_attachment_play_action);
                 } else if (attachmentInfo.mAllowInstall) {
                     openButton.setText(R.string.message_view_attachment_install_action);
