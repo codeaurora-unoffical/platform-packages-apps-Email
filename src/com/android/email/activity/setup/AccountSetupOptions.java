@@ -93,7 +93,6 @@ public class AccountSetupOptions extends AccountSetupActivity implements OnClick
         mSyncContactsView = (CheckBox) UiUtilities.getView(this, R.id.account_sync_contacts);
         mSyncCalendarView = (CheckBox) UiUtilities.getView(this, R.id.account_sync_calendar);
         mSyncEmailView = (CheckBox) UiUtilities.getView(this, R.id.account_sync_email);
-        mSyncEmailView.setChecked(true);
         mBackgroundAttachmentsView = (CheckBox) UiUtilities.getView(this,
                 R.id.account_background_attachments);
         mBackgroundAttachmentsView.setChecked(true);
@@ -154,6 +153,8 @@ public class AccountSetupOptions extends AccountSetupActivity implements OnClick
             mSyncContactsView.setChecked(true);
             mSyncCalendarView.setVisibility(View.VISIBLE);
             mSyncCalendarView.setChecked(true);
+            mSyncEmailView.setVisibility(View.VISIBLE);
+            mSyncEmailView.setChecked(true);
             // Show the associated dividers
             UiUtilities.setVisibilitySafe(this, R.id.account_sync_contacts_divider, View.VISIBLE);
             UiUtilities.setVisibilitySafe(this, R.id.account_sync_calendar_divider, View.VISIBLE);
