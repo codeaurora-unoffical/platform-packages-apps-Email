@@ -798,6 +798,8 @@ public class AccountCheckSettingsFragment extends Fragment {
         // Bundle keys for arguments
         private final static String ARGS_MESSAGE = "ErrorDialog.Message";
         private final static String ARGS_EXCEPTION_ID = "ErrorDialog.ExceptionId";
+        // We have to make it static, otherwise it will be null after change language.
+        private static MessagingException sErrorException;
 
         /**
          * Use {@link #newInstance} This public constructor is still required so
@@ -811,6 +813,7 @@ public class AccountCheckSettingsFragment extends Fragment {
                 MessagingException ex) {
             ErrorDialog fragment = new ErrorDialog();
             Bundle arguments = new Bundle();
+            sErrorException = ex;
             arguments.putString(ARGS_MESSAGE, getErrorString(context, ex));
             arguments.putInt(ARGS_EXCEPTION_ID, ex.getExceptionType());
             fragment.setArguments(arguments);
@@ -822,7 +825,7 @@ public class AccountCheckSettingsFragment extends Fragment {
         public Dialog onCreateDialog(Bundle savedInstanceState) {
             final Context context = getActivity();
             final Bundle arguments = getArguments();
-            final String message = arguments.getString(ARGS_MESSAGE);
+            final String message = getErrorString(context, sErrorException);
             final int exceptionId = arguments.getInt(ARGS_EXCEPTION_ID);
             final AccountCheckSettingsFragment target =
                     (AccountCheckSettingsFragment) getTargetFragment();
