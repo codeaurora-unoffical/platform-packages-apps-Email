@@ -1777,57 +1777,102 @@ public abstract class MessageViewFragmentBase extends Fragment implements View.O
         if (bodyHtml == null) {
             text = bodyText;
             /*
-             * Convert the plain text to HTML
-             */
-            StringBuffer sbTel = new StringBuffer("<html><body>");
-			StringBuffer sb = new StringBuffer("");
+                     * Convert the plain text to HTML
+                     */
+            StringBuffer sb = new StringBuffer("<html><body>");
+			StringBuffer sbEmail = new StringBuffer("");
+			StringBuffer sbNumber = new StringBuffer("");
             if (text != null) {
                 // Escape any inadvertent HTML in the text message
                 text = EmailHtmlUtil.escapeCharacterToDisplay(text);
-				
-				// Find any embedded Phone's and linkify
-                Matcher mTel = Patterns.PHONE.matcher(text);
-				while (mTel.find()) {
-					String number = mTel.group();
-                    String ref = String.format("<a href=\"tel:%s\">%s</a>", number, number);
-                    mTel.appendReplacement(sbTel, ref);
-				}
-				mTel.appendTail(sbTel);   
-				
                 // Find any embedded URL's and linkify
-                text = sbTel.toString();
                 Matcher m = WEB_URL.matcher(text);
-                while (m.find()) {
-                    int start = m.start();
-                    /*
-                     * WEB_URL_PATTERN may match domain part of email address. To detect
-                     * this false match, the character just before the matched string
-                     * should not be '@'.
-                     */
-                    if (start == 0 || text.charAt(start - 1) != '@') {
-                        String url = m.group();
-                        Matcher proto = WEB_URL_PROTOCOL.matcher(url);
-                        String link;
-                        if (proto.find()) {
-                            // This is work around to force URL protocol part be lower case,
-                            // because WebView could follow only lower case protocol link.
-                            link = proto.group().toLowerCase() + url.substring(proto.end());
-                        } else {
-                            // Patterns.WEB_URL matches URL without protocol part,
-                            // so added default protocol to link.
-                            link = "http://" + url;
+                try{                
+                    while (m.find()) {
+                        int start = m.start();
+                        /*
+                                        * WEB_URL_PATTERN may match domain part of email address. To detect
+                                        * this false match, the character just before the matched string
+                                        * should not be '@'.
+                                        */
+                        if (start == 0 || text.charAt(start - 1) != '@') {
+                            String url = m.group();
+                            Matcher proto = WEB_URL_PROTOCOL.matcher(url);
+                            String link;
+                            if (proto.find()) {
+                                // This is work around to force URL protocol part be lower case,
+                                // because WebView could follow only lower case protocol link.
+                                link = proto.group().toLowerCase() + url.substring(proto.end());
+                            } else {
+                                // Patterns.WEB_URL matches URL without protocol part,
+                                // so added default protocol to link.
+                                link = "http://" + url;
+                            }
+                            String href = String.format("<a href=\"%s\">%s</a>", link, url);
+                            m.appendReplacement(sb, href);
                         }
-                        String href = String.format("<a href=\"%s\">%s</a>", link, url);
-                        m.appendReplacement(sb, href);
+                        else {
+                            m.appendReplacement(sb, "$0");
+                        }
                     }
-                    else {
-                        m.appendReplacement(sb, "$0");
-                    }
-                }
+                }catch(Exception e){
+                }                
                 m.appendTail(sb);
-            }
-            sb.append("</body></html>");
-            text = sb.toString();
+			
+				Matcher mEmail = Patterns.EMAIL_ADDRESS.matcher(sb.toString());
+				try{
+					while (mEmail.find()) {
+                        String email_addr = mEmail.group();
+						String emailRef = String.format("<a href=\"mailto:%s\">%s</a>", email_addr, email_addr);
+						mEmail.appendReplacement(sbEmail, emailRef);
+					}
+				}catch(Exception e){
+                }
+				mEmail.appendTail(sbEmail); 
+				
+		    	Matcher mTel = Patterns.PHONE.matcher(sbEmail.toString());
+            	try{
+                    while (mTel.find()) {
+                        String number = mTel.group();
+						//check the number format
+						int telEnd = mTel.end();
+						boolean isEmailAddr = false;
+						boolean isWebUrl = false;
+						
+						if((telEnd+2) > sbEmail.length()){
+							isWebUrl = false;
+						}else if((sbEmail.charAt(telEnd) == '.')
+							&&((sbEmail.charAt(telEnd + 1) == 'c')||(sbEmail.charAt(telEnd + 1) == 'n'))){
+							isWebUrl = true;	
+						}
+						
+						for(int i = 0; i < 6; i++){
+							if((telEnd + i) >= sbEmail.length())
+								break;
+							
+							if(sbEmail.charAt(telEnd + i) == '@'){
+								isEmailAddr = true;
+								break;
+							}
+
+							if(sbEmail.charAt(telEnd + i) == ' '
+							   ||sbEmail.charAt(telEnd + i) == '\n'){
+								break;
+							}
+						}
+						
+						if((!isEmailAddr)&&(!isWebUrl)){
+                        	String numberRef = String.format("<a href=\"tel:%s\">%s</a>", number, number);							
+							mTel.appendReplacement(sbNumber, numberRef);
+						}
+                    }
+                }catch(Exception e){
+                }
+                mTel.appendTail(sbNumber);    
+            }	
+			
+            sbNumber.append("</body></html>");
+            text = sbNumber.toString();
         } else {
             text = bodyHtml;
             mHtmlTextRaw = bodyHtml;
