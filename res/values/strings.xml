@@ -1242,4 +1242,10 @@ as <xliff:g id="filename">%s</xliff:g>.</string>
 
     <!-- Alert the mail didn't fetch complete -->
     <string name="clip_message">## Message clipped ## You could fetch the entire mail</string>
+
+    <!-- Alert the user, the attachment didn't download completely -->
+    <string name="alert_attachment_not_complete_title">Attachment not complete</string>
+    <string name="alert_attachment_not_complete_message">The attachments haven\'t been downloaded completely. You could forward the downloaded attachment directly. Or you could forward it after downloading the entire attachments.</string>
+    <string name="alert_forward_immediately">Forward directly</string>
+    <string name="alert_forward_after_download_complete">Download then forward</string>
 </resources>
