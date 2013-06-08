@@ -280,16 +280,9 @@ public class Rfc822Output {
      */
     private static void writeOneAttachment(Context context, Writer writer, OutputStream out,
             Attachment attachment) throws IOException, MessagingException {
-		// encode the attr file name
-        if(attachment.mFileName != null){
-            attachment.mFileName = MimeUtility.foldAndEncode2(attachment.mFileName,  7); 
-        }
-
-        // Caused by the file maybe not named by the English alphabet,
-        // so accroding to RFC822, need encoded it.
+        // caused by the file name maybe not English, so accroding to RFC822, need encoded it.
         writeHeader(writer, "Content-Type",
-                attachment.mMimeType
-                + ";\n name=\"" + MimeUtility.foldAndEncode2(attachment.mFileName, 0) + "\"");
+                attachment.mMimeType + ";\n name=\"" + MimeUtility.foldAndEncode2(attachment.mFileName, 0) + "\"");
         writeHeader(writer, "Content-Transfer-Encoding", "base64");
         // Most attachments (real files) will send Content-Disposition.  The suppression option
         // is used when sending calendar invites.
