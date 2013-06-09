@@ -188,7 +188,8 @@ public class Welcome extends Activity {
         // already been started
         // When the service starts, it reconciles EAS accounts.
         // TODO More completely separate ExchangeService from Email app
-        EmailServiceUtils.startExchangeService(this);
+		// Move below code to EmailAsyncTask for shorter launch time
+        //EmailServiceUtils.startExchangeService(this);
 
         // Extract parameters from the intent.
         final Intent intent = getIntent();
@@ -202,6 +203,7 @@ public class Welcome extends Activity {
         EmailAsyncTask.runAsyncParallel(new Runnable() {
             @Override
             public void run() {
+            	EmailServiceUtils.startExchangeService(Welcome.this);
                 // Reconciling can be heavy - so do it in the background.
                 if (MailService.hasMismatchInPopImapAccounts(Welcome.this)) {
                     MailService.reconcilePopImapAccountsSync(Welcome.this);
@@ -358,35 +360,17 @@ public class Welcome extends Activity {
      * </pre>
      */
     private void resolveAccount() {
-        final int numAccount = getAccountNum();
-        Intent intent = getIntent();
-        String action = intent.getAction();
-        Uri uri = intent.getData();
+        final int numAccount = EmailContent.count(this, Account.CONTENT_URI);
         if (numAccount == 0) {
-            // no account
-            if (Intent.ACTION_SENDTO.equals(action)
-                    || Intent.ACTION_SEND.equals(action)
-                    || Intent.ACTION_SEND_MULTIPLE.equals(action)
-                    || (uri != null && uri.isOpaque())) {
-                UiUtilities.setNeededMsgComp(true, intent);
-                // If has no email account when share by email in other apps, it
-                // will show pop-up to indicate config new account.
-                try{
-                    ConfigureAccountFragment dialogFragment = ConfigureAccountFragment
-                            .newInstance();
-                    dialogFragment.show(getFragmentManager(),
-                            ConfigureAccountFragment.TAG);
-                }catch (Exception e) {
-                	return;
-                }
-            } else {
-                UiUtilities.setNeededMsgComp(false, null);    // reset the value.
-                AccountSetupBasics.actionNewAccount(this);
-                finish();
-            }
+            //There's no account configured, start account setup.
+            AccountSetupBasics.actionNewAccount(this);
+            finish();
             return;
         } else {
             // has account
+			Intent intent = getIntent();
+			String action = intent.getAction();
+			Uri uri = intent.getData();
             if (Intent.ACTION_SENDTO.equals(action)
                     || Intent.ACTION_SEND.equals(action)
                     || Intent.ACTION_SEND_MULTIPLE.equals(action)
