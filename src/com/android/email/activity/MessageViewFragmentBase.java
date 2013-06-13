@@ -812,7 +812,9 @@ public abstract class MessageViewFragmentBase extends Fragment implements View.O
             }
             if (result.mPhoto != null) { // photo will be null if unknown.
                 mFragment.mFromBadge.setImageBitmap(result.mPhoto);
-            }
+            }else{//photo will show default if null
+				mFragment.mFromBadge.setImageResource(R.drawable.ic_contact_picture);
+			}
             if (triggered) {
                 mFragment.onClickSender();
             }
