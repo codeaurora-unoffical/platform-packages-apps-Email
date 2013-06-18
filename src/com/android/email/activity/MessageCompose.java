@@ -66,6 +66,7 @@ import com.android.email.EmailAddressValidator;
 import com.android.email.R;
 import com.android.email.RecipientAdapter;
 import com.android.email.activity.setup.AccountSettings;
+import com.android.email.activity.setup.AccountSetupBasics;
 import com.android.email.mail.internet.EmailHtmlUtil;
 import com.android.emailcommon.Logging;
 import com.android.emailcommon.internet.MimeUtility;
@@ -230,7 +231,8 @@ public class MessageCompose extends Activity implements OnClickListener, OnFocus
      * "false" means not picking contact. "true" means picking contact.
      */
     private boolean mPickingContact = false;
-    private Boolean mQuickResponsesAvailable = true;
+    private boolean mQuickResponsesAvailable = true;
+    private boolean mFinishedForNoAccount = false;
     private final EmailAsyncTask.Tracker mTaskTracker = new EmailAsyncTask.Tracker();
 
     private AccountSpecifier mAddressAdapterTo;
@@ -401,7 +403,15 @@ public class MessageCompose extends Activity implements OnClickListener, OnFocus
         if (accountId == Account.NO_ACCOUNT || account == null) {
             // There are no accounts set up. This should not have happened. Prompt the
             // user to set up an account as an acceptable bailout.
-            Welcome.actionStart(this);
+            if (Intent.ACTION_VIEW.equals(mAction)
+                    || Intent.ACTION_SENDTO.equals(mAction)
+                    || Intent.ACTION_SEND.equals(mAction)
+                    || Intent.ACTION_SEND_MULTIPLE.equals(mAction)) {
+                AccountSetupBasics.actionSetupAccountThenCompose(this, getIntent());
+            } else {
+                Welcome.actionStart(this);
+            }
+            mFinishedForNoAccount = true;
             finish();
         } else {
             setAccount(account);
@@ -1522,7 +1532,7 @@ public class MessageCompose extends Activity implements OnClickListener, OnFocus
    }
 
     private void saveIfNeeded() {
-        if (!mDraftNeedsSaving) {
+        if (!mDraftNeedsSaving || mFinishedForNoAccount) {
             return;
         }
         setMessageChanged(false);
@@ -2146,6 +2156,11 @@ public class MessageCompose extends Activity implements OnClickListener, OnFocus
     void initFromIntent(Intent intent) {
 
         setAccount(intent);
+
+        if (mFinishedForNoAccount) {
+            // If there isn't any account, we needn't do anything.
+            return;
+        }
 
         // First, add values stored in top-level extras
         String[] extraStrings = intent.getStringArrayExtra(Intent.EXTRA_EMAIL);
