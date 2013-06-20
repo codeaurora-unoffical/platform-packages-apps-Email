@@ -1,4 +1,7 @@
 /*
+ * Copyright (C) 2013, The Linux Foundation. All Rights Reserved.
+ * Not a Contribution.
+ *
  * Copyright (C) 2010 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -36,6 +39,7 @@ import android.os.Build;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.Process;
+import android.os.SystemProperties;
 import android.text.SpannableString;
 import android.text.TextUtils;
 import android.text.style.TextAppearanceSpan;
@@ -181,6 +185,15 @@ public class NotificationController {
                     mContext, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
         }
 
+        int notify_icon = R.drawable.stat_notify_email_generic;
+        // Customize 189 email account notify icon
+        if (SystemProperties.getBoolean("persist.env.email.notifyicon", false)) {
+            String emailAddress = account != null ? account.getEmailAddress() : null;
+            if (emailAddress != null && emailAddress.endsWith("@189.cn")) {
+                notify_icon = R.drawable.stat_notify_email_189;
+            }
+        }
+
         // NOTE: the ticker is not shown for notifications in the Holo UX
         final Notification.Builder builder = new Notification.Builder(mContext)
                 .setContentTitle(title)
@@ -188,7 +201,7 @@ public class NotificationController {
                 .setContentIntent(pending)
                 .setLargeIcon(largeIcon)
                 .setNumber(number == null ? 0 : number)
-                .setSmallIcon(R.drawable.stat_notify_email_generic)
+                .setSmallIcon(notify_icon)
                 .setWhen(mClock.getTime())
                 .setTicker(ticker)
                 .setOngoing(ongoing);
