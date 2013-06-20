@@ -491,6 +491,27 @@ class MailboxFragmentAdapter extends CursorAdapter {
         row.add(accountId);
     }
 
+	//add function to add mailbox row per account
+    private static void addAccountMailboxRow(Context context, MatrixCursor cursor, long accId,
+            long id, int mailboxType, boolean showAlways) {
+        if (id >= 0) {
+            throw new IllegalArgumentException(); // Must be QUERY_ALL_*, which are all negative
+        }
+        int count = 0;
+        if (accId != Account.NO_ACCOUNT
+                && accId != Account.ACCOUNT_ID_COMBINED_VIEW) {
+			count = FolderProperties.getFavoriteMessageCount(context, id, accId);
+        } else {
+            count = FolderProperties.getMessageCountForCombinedMailbox(context, id);
+        }
+
+        if (showAlways || (count > 0)) {
+            addMailboxRow(
+                    cursor, id, "", mailboxType, count, count, ROW_TYPE_MAILBOX, Mailbox.FLAG_NONE,
+                    Account.ACCOUNT_ID_COMBINED_VIEW);
+        }
+    }
+	
     private static void addCombinedMailboxRow(Context context, MatrixCursor cursor, long id,
             int mailboxType, boolean showAlways) {
         if (id >= 0) {
@@ -588,8 +609,11 @@ class MailboxFragmentAdapter extends CursorAdapter {
                 int accountStarredCount = Message.getFavoriteMessageCount(mContext, mAccountId);
                 if (accountStarredCount > 0) {
                     // Only add "Starred", if there is at least one starred message
-                    addCombinedMailboxRow(mContext, starredCursor, Mailbox.QUERY_ALL_FAVORITES,
-                            Mailbox.TYPE_MAIL, true);
+					// Add starred information for each account instead of the combined starred 
+                    addAccountMailboxRow(mContext, starredCursor, mAccountId, 
+                            Mailbox.QUERY_ALL_FAVORITES, Mailbox.TYPE_MAIL, true);
+                    //addCombinedMailboxRow(mContext, starredCursor, Mailbox.QUERY_ALL_FAVORITES,
+                    //        Mailbox.TYPE_MAIL, true);
                 }
                 returnCursor = new MergeCursor(new Cursor[] {
                         starredCursor, systemMailboxCursor, recentCursor, headerCursor,
