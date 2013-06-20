@@ -304,6 +304,7 @@
         <activity
             android:name=".activity.setup.MailboxSettings"
             android:label="@string/mailbox_settings_activity_title"
+            android:configChanges="screenSize|orientation"
             >
         </activity>
 
