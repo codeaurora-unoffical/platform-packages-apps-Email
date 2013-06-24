@@ -1566,6 +1566,7 @@ public class MessageListFragment extends ListFragment
             lv.setItemChecked(i, true);
             if (ensureSelectionVisible) {
                 Utility.listViewSmoothScrollToPosition(getActivity(), lv, i);
+                mSavedListState = getListView().onSaveInstanceState();
             }
             break;
         }
