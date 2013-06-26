@@ -93,6 +93,7 @@ public class AccountSetupOptions extends AccountSetupActivity implements OnClick
         mSyncContactsView = (CheckBox) UiUtilities.getView(this, R.id.account_sync_contacts);
         mSyncCalendarView = (CheckBox) UiUtilities.getView(this, R.id.account_sync_calendar);
         mSyncEmailView = (CheckBox) UiUtilities.getView(this, R.id.account_sync_email);
+        mSyncEmailView.setChecked(true);
         mBackgroundAttachmentsView = (CheckBox) UiUtilities.getView(this,
                 R.id.account_background_attachments);
         mBackgroundAttachmentsView.setChecked(true);
