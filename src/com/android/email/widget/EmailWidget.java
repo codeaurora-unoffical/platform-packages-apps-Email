@@ -54,6 +54,7 @@ import com.android.emailcommon.provider.Mailbox;
 import com.android.emailcommon.utility.EmailAsyncTask;
 
 import java.util.List;
+import android.util.TypedValue;
 
 /**
  * The email widget.
@@ -283,7 +284,9 @@ public class EmailWidget implements RemoteViewsService.RemoteViewsFactory,
         // Set up the title (view type + count of messages)
         setTextViewTextAndDesc(views, R.id.widget_title, mMailboxName);
         views.setViewVisibility(R.id.widget_tap, View.VISIBLE);
+        views.setTextViewTextSize(R.id.widget_title, TypedValue.COMPLEX_UNIT_PX, 18);
         setTextViewTextAndDesc(views, R.id.widget_tap, mAccountName);
+        views.setTextViewTextSize(R.id.widget_tap, TypedValue.COMPLEX_UNIT_PX, 14);
         String count = "";
         synchronized (sWidgetLock) {
             if (isCursorValid()) {
@@ -292,6 +295,7 @@ public class EmailWidget implements RemoteViewsService.RemoteViewsFactory,
             }
         }
         setTextViewTextAndDesc(views, R.id.widget_count, count);
+        views.setTextViewTextSize(R.id.widget_count, TypedValue.COMPLEX_UNIT_PX, 36);
     }
 
     /**
