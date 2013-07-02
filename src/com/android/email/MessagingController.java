@@ -23,11 +23,9 @@ import android.content.Context;
 import android.database.Cursor;
 import android.net.TrafficStats;
 import android.net.Uri;
-import android.os.Handler;
 import android.os.Process;
 import android.text.TextUtils;
 import android.util.Log;
-import android.widget.Toast;
 
 import com.android.email.mail.Sender;
 import com.android.email.mail.Store;
@@ -2113,10 +2111,19 @@ public class MessagingController implements Runnable {
             }
 
             // 4.  loop through the available messages and send them
+            // Clear send progress notification
+            nc.cancelSendProgressNotification(-1);
+            // Show send progress notification for this account
+            nc.showMessageStartSendNotification(account);
+
+            int needSendCount = c.getCount();
+            int failedSendCount = 0;
             while (c.moveToNext()) {
                 long messageId = -1;
                 try {
                     messageId = c.getLong(0);
+                    // Clear send progress notification for this message
+                    nc.cancelSendProgressNotification(messageId);
                     mListeners.sendPendingMessagesStarted(account.mId, messageId);
                     // Don't send messages with unloaded attachments
                     if (Utility.hasUnloadedAttachments(mContext, messageId)) {
@@ -2128,11 +2135,16 @@ public class MessagingController implements Runnable {
                     }
                     sender.sendMessage(messageId);
                 } catch (MessagingException me) {
+                    // Update the failed send message count.
+                    failedSendCount = failedSendCount + 1;
+
                     // report error for this message, but keep trying others
                     if (me instanceof AuthenticationFailedException) {
                         nc.showLoginFailedNotification(account.mId);
                     }
                     mListeners.sendPendingMessagesFailed(account.mId, messageId, me);
+                    // Show send failed notification for this message
+                    nc.showMessageSendFailedNotification(account, messageId, me);
                     continue;
                 }
                 // 5. move to sent, or delete
@@ -2161,11 +2173,15 @@ public class MessagingController implements Runnable {
             // 6. report completion/success
             mListeners.sendPendingMessagesCompleted(account.mId);
             nc.cancelLoginFailedNotification(account.mId);
+            // Show send completed notification for this account
+            nc.showMessageSendCompletedNotification(account, needSendCount, failedSendCount);
         } catch (MessagingException me) {
             if (me instanceof AuthenticationFailedException) {
                 nc.showLoginFailedNotification(account.mId);
             }
             mListeners.sendPendingMessagesFailed(account.mId, -1, me);
+            // Show send failed notification for this account
+            nc.showMessageSendFailedNotification(account, -1, me);
         } finally {
             c.close();
         }
