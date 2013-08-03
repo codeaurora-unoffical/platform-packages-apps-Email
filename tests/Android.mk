@@ -31,4 +31,7 @@ LOCAL_PACKAGE_NAME := EmailTests
 
 LOCAL_INSTRUMENTATION_FOR := Email
 
+#Disable building package for AUTOMOTIVE
+ifndef AUTOMOTIVE_TARGET
 include $(BUILD_PACKAGE)
+endif

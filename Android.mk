@@ -47,7 +47,10 @@ LOCAL_SDK_VERSION := current
 LOCAL_EMMA_COVERAGE_FILTER := +com.android.emailcommon.*,+com.android.email.*, \
     +org.apache.james.mime4j.*,+com.beetstra.jutf7.*,+org.apache.commons.io.*
 
+#Disable building package for AUTOMOTIVE
+ifndef AUTOMOTIVE_TARGET
 include $(BUILD_PACKAGE)
+endif
 
 # only include rules to build other stuff for the original package, not the derived package.
 ifeq ($(strip $(LOCAL_PACKAGE_OVERRIDES)),)
