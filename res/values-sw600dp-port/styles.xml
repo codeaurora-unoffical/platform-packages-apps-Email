@@ -20,15 +20,15 @@
     <!-- Use fixed margin in portrait -->
     <style name="message_compose_scroll">
         <item name="android:layout_width">match_parent</item>
-        <item name="android:layout_marginLeft">16dip</item>
-        <item name="android:layout_marginRight">16dip</item>
+        <item name="android:layout_marginStart">16dip</item>
+        <item name="android:layout_marginEnd">16dip</item>
     </style>
 
     <style name="accountSetupTypePrevious" parent="@style/accountSetupButton">
         <item name="android:layout_alignParentBottom">true</item>
-        <item name="android:layout_alignParentLeft">true</item>
+        <item name="android:layout_alignParentStart">true</item>
         <item name="android:layout_marginBottom">48dip</item>
-        <item name="android:layout_marginLeft">48dip</item>
+        <item name="android:layout_marginStart">48dip</item>
     </style>
 
     <!-- Cancel/Done buttons on the account settings (server settings) fragments -->

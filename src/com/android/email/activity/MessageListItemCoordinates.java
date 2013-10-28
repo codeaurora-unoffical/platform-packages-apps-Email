@@ -60,6 +60,7 @@ public class MessageListItemCoordinates {
     // Star.
     int starX;
     int starY;
+    int starWidthIncludingMargins;
 
     // Senders.
     int sendersX;
@@ -272,6 +273,10 @@ public class MessageListItemCoordinates {
             coordinates.starX = getX(star);
             coordinates.starY = getY(star);
 
+            // Change for RTL.
+            if (MessageListItem.isLayoutRtl) {
+                coordinates.starWidthIncludingMargins = getWidth(star, true);
+            }
             View state = view.findViewById(R.id.reply_state);
             coordinates.stateX = getX(state);
             coordinates.stateY = getY(state);

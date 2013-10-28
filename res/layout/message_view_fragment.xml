@@ -44,8 +44,8 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dip"
                 android:layout_marginBottom="4dip"
-                android:layout_marginLeft="8dip"
-                android:layout_marginRight="8dip"
+                android:layout_marginStart="8dip"
+                android:layout_marginEnd="8dip"
                 android:textAppearance="?android:attr/textAppearanceSmall"
                 android:textColor="?android:attr/textColorSecondary"
                 android:textStyle="bold"
@@ -58,8 +58,8 @@
                 android:id="@+id/message_view_subheader"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginLeft="16dip"
-                android:layout_marginRight="16dip"
+                android:layout_marginStart="16dip"
+                android:layout_marginEnd="16dip"
                 >
                 <include layout="@layout/message_view_subheader" />
             </FrameLayout>
@@ -67,8 +67,8 @@
             <!-- divider -->
             <View
                 android:layout_width="match_parent"
-                android:layout_marginLeft="16dip"
-                android:layout_marginRight="16dip"
+                android:layout_marginStart="16dip"
+                android:layout_marginEnd="16dip"
                 style="@style/message_view_horizontal_divider"
                 />
 
@@ -76,8 +76,8 @@
                 android:id="@+id/message_tabs_section"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginLeft="16dip"
-                android:layout_marginRight="16dip"
+                android:layout_marginStart="16dip"
+                android:layout_marginEnd="16dip"
                 android:orientation="vertical"
                 >
                 <Button
@@ -85,7 +85,7 @@
                     style="?android:attr/borderlessButtonStyle"
                     android:layout_width="wrap_content"
                     android:layout_height="48dip"
-                    android:drawableLeft="@drawable/ic_show_images_holo_light"
+                    android:drawableStart="@drawable/ic_show_images_holo_light"
                     android:drawablePadding="8dip"
                     android:text="@string/message_view_show_pictures_action"
                     android:textAppearance="?android:attr/textAppearanceSmall"
@@ -96,7 +96,7 @@
                     style="?android:attr/borderlessButtonStyle"
                     android:layout_width="wrap_content"
                     android:layout_height="48dip"
-                    android:drawableLeft="@drawable/ic_show_images_holo_light"
+                    android:drawableStart="@drawable/ic_show_images_holo_light"
                     android:drawablePadding="8dip"
                     android:text="@string/message_view_always_show_pictures_prompt"
                     android:textAppearance="?android:attr/textAppearanceSmall"
@@ -147,8 +147,8 @@
                 android:id="@+id/message_content"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginLeft="16dip"
-                android:layout_marginRight="16dip"
+                android:layout_marginStart="16dip"
+                android:layout_marginEnd="16dip"
                 android:background="@android:color/white"
                 android:visibility="gone"
                 />
@@ -163,8 +163,8 @@
                 android:id="@+id/invite_scroll"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginLeft="16dip"
-                android:layout_marginRight="16dip"
+                android:layout_marginStart="16dip"
+                android:layout_marginEnd="16dip"
                 android:paddingTop="16dip"
                 android:paddingBottom="16dip"
                 android:visibility="gone"
@@ -179,8 +179,8 @@
                 android:id="@+id/attachments_scroll"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginLeft="16dip"
-                android:layout_marginRight="16dip"
+                android:layout_marginStart="16dip"
+                android:layout_marginEnd="16dip"
                 android:visibility="gone"
                 >
                 <LinearLayout
@@ -197,8 +197,8 @@
                 android:id="@+id/clip_message"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginLeft="16dip"
-                android:layout_marginRight="16dip"
+                android:layout_marginStart="16dip"
+                android:layout_marginEnd="16dip"
                 android:textColor="@android:color/holo_blue_light"
                 android:textSize="14dp"
                 android:textStyle="bold"

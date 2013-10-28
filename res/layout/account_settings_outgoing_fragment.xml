@@ -27,8 +27,8 @@
         android:layout_height="wrap_content"
         android:orientation="vertical"
         android:paddingTop="@dimen/settings_fragment_padding_top"
-        android:paddingLeft="@dimen/settings_fragment_padding_left"
-        android:paddingRight="@dimen/settings_fragment_padding_right"
+        android:paddingStart="@dimen/settings_fragment_padding_left"
+        android:paddingEnd="@dimen/settings_fragment_padding_right"
         >
 
         <!-- Fields entry -->

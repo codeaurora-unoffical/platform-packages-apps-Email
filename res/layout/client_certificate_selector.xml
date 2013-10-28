@@ -28,7 +28,7 @@
         style="@style/accountSetupButton"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_alignParentRight="true"
+        android:layout_alignParentEnd="true"
         android:text="@string/account_setup_exchange_use_certificate" />
 
     <TextView
@@ -36,8 +36,8 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_alignParentTop="true"
-        android:layout_alignParentLeft="true"
-        android:layout_toLeftOf="@+id/select_button"
+        android:layout_alignParentStart="true"
+        android:layout_toStartOf="@+id/select_button"
         android:textStyle="bold"
         android:text="@string/account_setup_exchange_certificate_title" />
 
@@ -45,10 +45,10 @@
         android:id="@+id/certificate_alias"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginLeft="16dip"
+        android:layout_marginStart="16dip"
         android:layout_below="@+id/title"
-        android:layout_alignParentLeft="true"
-        android:layout_toLeftOf="@+id/select_button"
+        android:layout_alignParentStart="true"
+        android:layout_toStartOf="@+id/select_button"
         android:textColor="@color/text_secondary_color"
         android:singleLine="true"
         android:ellipsize="end"

@@ -19,8 +19,8 @@
     android:layout_height="match_parent"
     android:orientation="vertical"
     android:paddingTop="@dimen/settings_fragment_padding_top"
-    android:paddingLeft="@dimen/settings_fragment_padding_left"
-    android:paddingRight="@dimen/settings_fragment_padding_right"
+    android:paddingStart="@dimen/settings_fragment_padding_left"
+    android:paddingEnd="@dimen/settings_fragment_padding_right"
     >
 
     <!-- List of quick responses and empty view for when there are none-->

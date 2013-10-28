@@ -27,7 +27,7 @@
         <TextView
             android:layout_height="wrap_content"
             android:layout_width="wrap_content"
-            android:layout_marginRight="16dip"
+            android:layout_marginEnd="16dip"
             android:text="@string/account_setup_incoming_username_label" />
         <EditText
             android:id="@+id/account_username"
@@ -42,7 +42,7 @@
         <TextView
             android:layout_height="wrap_content"
             android:layout_width="wrap_content"
-            android:layout_marginRight="16dip"
+            android:layout_marginEnd="16dip"
             android:text="@string/account_setup_incoming_password_label" />
         <EditText
             android:id="@+id/account_password"
@@ -59,7 +59,7 @@
             android:id="@+id/account_server_label"
             android:layout_height="wrap_content"
             android:layout_width="wrap_content"
-            android:layout_marginRight="16dip"
+            android:layout_marginEnd="16dip"
             android:text="@string/account_setup_incoming_pop_server_label" />
         <!-- Note: we use inputType=textUri as the closest approximation to a server name -->
         <EditText
@@ -75,7 +75,7 @@
         <TextView
             android:layout_height="wrap_content"
             android:layout_width="wrap_content"
-            android:layout_marginRight="16dip"
+            android:layout_marginEnd="16dip"
             android:text="@string/account_setup_incoming_security_label" />
         <Spinner
             android:id="@+id/account_security_type"
@@ -88,7 +88,7 @@
         <TextView
             android:layout_height="wrap_content"
             android:layout_width="wrap_content"
-            android:layout_marginRight="16dip"
+            android:layout_marginEnd="16dip"
             android:text="@string/account_setup_incoming_port_label" />
         <EditText
             android:id="@+id/account_port"
@@ -104,7 +104,7 @@
             android:id="@+id/account_delete_policy_label"
             android:layout_height="wrap_content"
             android:layout_width="wrap_content"
-            android:layout_marginRight="16dip"
+            android:layout_marginEnd="16dip"
             android:text="@string/account_setup_incoming_delete_policy_label" />
         <Spinner
             android:id="@+id/account_delete_policy"
@@ -118,7 +118,7 @@
         <TextView
             android:layout_height="wrap_content"
             android:layout_width="wrap_content"
-            android:layout_marginRight="16dip"
+            android:layout_marginEnd="16dip"
             android:text="@string/account_setup_incoming_imap_path_prefix_label" />
         <EditText
             android:id="@+id/imap_path_prefix"

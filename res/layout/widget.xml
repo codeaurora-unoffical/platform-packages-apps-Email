@@ -19,16 +19,16 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:layout_marginTop="@dimen/widget_margin_top"
-    android:layout_marginLeft="@dimen/widget_margin_left"
-    android:layout_marginRight="@dimen/widget_margin_right"
+    android:layout_marginStart="@dimen/widget_margin_left"
+    android:layout_marginEnd="@dimen/widget_margin_right"
     android:layout_marginBottom="@dimen/widget_margin_bottom"
     android:orientation="vertical">
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="48dip"
         android:gravity="center_vertical"
-        android:paddingLeft="8dip"
-        android:paddingRight="8dip"
+        android:paddingStart="8dip"
+        android:paddingEnd="8dip"
         android:orientation="horizontal"
         android:background="@drawable/header_bg_email_widget_holo"
         android:id="@+id/widget_header">
@@ -36,7 +36,7 @@
             android:id="@+id/widget_logo"
             android:layout_width="32dip"
             android:layout_height="32dip"
-            android:layout_marginRight="8dip"
+            android:layout_marginEnd="8dip"
             android:src="@mipmap/ic_launcher_email" />
         <LinearLayout
             android:id="@+id/widget_header"
@@ -68,7 +68,7 @@
             android:id="@+id/widget_count"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginRight="12dip"
+            android:layout_marginEnd="12dip"
             android:textSize="36sp"
             android:textStyle="bold"
             android:textColor="@color/widget_unread_color" />
@@ -92,8 +92,8 @@
         android:id="@+id/tap_to_configure"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginLeft="5dip"
-        android:layout_marginRight="5dip"
+        android:layout_marginStart="5dip"
+        android:layout_marginEnd="5dip"
         android:layout_weight="1"
         android:layout_gravity="fill"
         android:gravity="center"

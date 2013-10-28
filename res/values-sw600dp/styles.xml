@@ -72,7 +72,7 @@
     <style name="message_compose_header_field_container" parent="@android:style/Widget.AutoCompleteTextView">
         <item name="android:layout_width">match_parent</item>
         <item name="android:layout_height">wrap_content</item>
-        <item name="android:paddingLeft">0dip</item>
+        <item name="android:paddingStart">0dip</item>
         <item name="android:orientation">horizontal</item>
         <item name="android:addStatesFromChildren">true</item>
         <item name="android:focusable">false</item>
@@ -85,8 +85,8 @@
         <item name="android:gravity">center_vertical</item>
         <item name="android:paddingTop">0dip</item>
         <item name="android:paddingBottom">0dip</item>
-        <item name="android:paddingLeft">16dip</item>
-        <item name="android:paddingRight">16dip</item>
+        <item name="android:paddingStart">16dip</item>
+        <item name="android:paddingEnd">16dip</item>
         <item name="android:ellipsize">end</item>
         <item name="android:singleLine">true</item>
         <item name="android:textSize">18dip</item>
@@ -99,8 +99,8 @@
         <item name="android:gravity">center_vertical</item>
         <item name="android:paddingTop">0dip</item>
         <item name="android:paddingBottom">0dip</item>
-        <item name="android:paddingLeft">0dip</item>
-        <item name="android:paddingRight">0dip</item>
+        <item name="android:paddingStart">0dip</item>
+        <item name="android:paddingEnd">0dip</item>
         <item name="android:textSize">18dip</item>
         <item name="android:textColor">@color/text_primary_color</item>
         <item name="android:singleLine">true</item>
@@ -128,8 +128,8 @@
     </style>
 
     <style name="accountSetupTypePrevious" parent="@style/accountSetupButton">
-        <item name="android:layout_toRightOf">@+id/main_content"</item>
-        <item name="android:layout_alignParentRight">true</item>
+        <item name="android:layout_toEndOf">@+id/main_content"</item>
+        <item name="android:layout_alignParentEnd">true</item>
     </style>
 
     <style name="action_bar_spinner_primary_text">
@@ -148,8 +148,8 @@
         <item name="android:layout_width">0dip</item>
         <item name="android:layout_weight">1</item>
         <item name="android:layout_height">match_parent</item>
-        <item name="android:layout_marginLeft">16dip</item>
-        <item name="android:layout_marginRight">16dip</item>
+        <item name="android:layout_marginStart">16dip</item>
+        <item name="android:layout_marginEnd">16dip</item>
         <item name="android:padding">0dip</item>
         <item name="android:textColor">@color/buttontext</item>
         <item name="android:textSize">14dip</item>
@@ -161,13 +161,13 @@
     </style>
 
     <style name="message_list_item_normal">
-        <item name="android:paddingLeft">0dip</item>
-        <item name="android:paddingRight">0dip</item>
+        <item name="android:paddingStart">0dip</item>
+        <item name="android:paddingEnd">0dip</item>
     </style>
 
     <style name="message_list_item_wide">
-        <item name="android:paddingLeft">16dip</item>
-        <item name="android:paddingRight">16dip</item>
+        <item name="android:paddingStart">16dip</item>
+        <item name="android:paddingEnd">16dip</item>
     </style>
 
 </resources>

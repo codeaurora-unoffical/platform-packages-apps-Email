@@ -56,6 +56,8 @@ public class MessageListItem extends View {
     /* package */ long mMailboxId;
     /* package */ long mAccountId;
 
+    public static boolean isLayoutRtl = false;
+
     private ThreePaneLayout mLayout;
     private MessagesAdapter mAdapter;
     private MessageListItemCoordinates mCoordinates;
@@ -415,6 +417,7 @@ public class MessageListItem extends View {
     protected void onLayout(boolean changed, int left, int top, int right, int bottom) {
         super.onLayout(changed, left, top, right, bottom);
 
+        isLayoutRtl = isLayoutRtl();
         mCoordinates = MessageListItemCoordinates.forWidth(mContext, mViewWidth, mIsSearchResult);
         calculateDrawingData();
     }
@@ -543,13 +546,33 @@ public class MessageListItem extends View {
         int checkRight = mCoordinates.checkmarkX
                 + mCoordinates.checkmarkWidthIncludingMargins + sScaledTouchSlop;
         int starLeft = mCoordinates.starX - sScaledTouchSlop;
+        int checkLeft = 0;
+        int starRight = 0;
+
+        // Change for RTL.
+        if (isLayoutRtl) {
+            checkLeft = mCoordinates.checkmarkX - sScaledTouchSlop;
+            starRight = mCoordinates.starX
+                + mCoordinates.starWidthIncludingMargins + sScaledTouchSlop;
+        }
 
         switch (event.getAction()) {
             case MotionEvent.ACTION_DOWN:
-                if (touchX < checkRight || touchX > starLeft) {
-                    mDownEvent = true;
-                    if ((touchX < checkRight) || (touchX > starLeft)) {
-                        handled = true;
+
+                // Change for RTL.
+                if (isLayoutRtl) {
+                    if (touchX > checkLeft || (touchX > starLeft && touchX < starRight)) {
+                        mDownEvent = true;
+                        if ((touchX < checkRight) || (touchX > starLeft)) {
+                            handled = true;
+                        }
+                    }
+                } else {
+                    if (touchX < checkRight || touchX > starLeft) {
+                        mDownEvent = true;
+                        if ((touchX < checkRight) || (touchX > starLeft)) {
+                            handled = true;
+                        }
                     }
                 }
                 break;
@@ -560,14 +583,28 @@ public class MessageListItem extends View {
 
             case MotionEvent.ACTION_UP:
                 if (mDownEvent) {
-                    if (touchX < checkRight) {
-                        mAdapter.toggleSelected(this);
-                        handled = true;
-                    } else if (touchX > starLeft) {
-                        mIsFavorite = !mIsFavorite;
-                        mAdapter.updateFavorite(this, mIsFavorite);
-                        handled = true;
+
+                    // Change for RTL.
+                    if (isLayoutRtl) {
+                        if (touchX > checkLeft) {
+                            mAdapter.toggleSelected(this);
+                            handled = true;
+                        } else if (touchX > starLeft && touchX < starRight) {
+                            mIsFavorite = !mIsFavorite;
+                            mAdapter.updateFavorite(this, mIsFavorite);
+                            handled = true;
+                        }
+                    } else {
+                        if (touchX < checkRight) {
+                            mAdapter.toggleSelected(this);
+                            handled = true;
+                        } else if (touchX > starLeft) {
+                            mIsFavorite = !mIsFavorite;
+                            mAdapter.updateFavorite(this, mIsFavorite);
+                            handled = true;
+                        }
                     }
+
                 }
                 break;
         }
