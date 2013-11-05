@@ -36,8 +36,8 @@
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:paddingLeft="16dip"
-            android:paddingRight="16dip"
+            android:paddingStart="16dip"
+            android:paddingEnd="16dip"
             android:orientation="vertical"
             >
 
@@ -72,8 +72,8 @@
                 android:id="@+id/message_view_subheader"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginLeft="16dip"
-                android:layout_marginRight="16dip"
+                android:layout_marginStart="16dip"
+                android:layout_marginEnd="16dip"
                 >
                 <include layout="@layout/message_view_subheader" />
             </FrameLayout>
@@ -95,7 +95,7 @@
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="40dip"
-                    android:layout_marginLeft="14dip"
+                    android:layout_marginStart="14dip"
                     android:orientation="horizontal"
                     >
                     <Button
@@ -149,7 +149,7 @@
                         android:text="@string/message_view_show_pictures_action"
                         android:textSize="14dip"
                         android:textColor="@color/text_ternary_color"
-                        android:drawableRight="@drawable/ic_show_images_holo_light"
+                        android:drawableEnd="@drawable/ic_show_images_holo_light"
                         android:drawablePadding="8dip"
                         />
                     <Button
@@ -162,7 +162,7 @@
                         android:text="@string/message_view_always_show_pictures_prompt"
                         android:textSize="14dip"
                         android:textColor="@color/text_ternary_color"
-                        android:drawableRight="@drawable/ic_show_images_holo_light"
+                        android:drawableEnd="@drawable/ic_show_images_holo_light"
                         android:drawablePadding="8dip"
                         android:visibility="gone"
                         />

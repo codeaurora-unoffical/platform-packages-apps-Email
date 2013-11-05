@@ -57,7 +57,7 @@
             android:layout_height="6dip"
             android:layout_marginBottom="2dip"
             android:layout_alignParentTop="true"
-            android:layout_marginLeft="8dip"
+            android:layout_marginStart="8dip"
             android:background="@android:color/black"
             />
         <TextView

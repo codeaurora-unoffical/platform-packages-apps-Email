@@ -28,7 +28,7 @@
     <Button android:id="@+id/add_cc_bcc"
         android:text="@string/plus_cc_label"
         style="@style/ComposeButton"
-        android:layout_marginLeft="16dip" />
+        android:layout_marginStart="16dip" />
 
     <ImageView android:id="@+id/add_attachment"
         android:text="@string/add_file_attachment"
@@ -36,8 +36,8 @@
         android:layout_height="32dip"
         android:src="@drawable/ic_attachment_holo_light"
         android:clickable="true"
-        android:layout_gravity="center_vertical|left"
-        android:gravity="left"
-        android:layout_marginLeft="14dip" />
+        android:layout_gravity="center_vertical|start"
+        android:gravity="start"
+        android:layout_marginStart="14dip" />
 
 </LinearLayout>

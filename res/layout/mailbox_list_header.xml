@@ -19,4 +19,4 @@
     android:layout_width="match_parent"
     android:ellipsize="end"
     style="?android:attr/listSeparatorTextViewStyle"
-    android:layout_marginLeft="@dimen/mailbox_list_padding_left" />
+    android:layout_marginStart="@dimen/mailbox_list_padding_left" />

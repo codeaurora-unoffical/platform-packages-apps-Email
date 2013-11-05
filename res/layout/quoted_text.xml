@@ -25,12 +25,12 @@
         <RelativeLayout android:layout_width="wrap_content"
             android:layout_height="match_parent"
             android:id="@+id/quoted_text_row"
-            android:layout_alignParentLeft="true">
+            android:layout_alignParentStart="true">
 
             <CheckBox android:id="@+id/include_quoted_text"
                 android:layout_height="match_parent"
                 android:layout_width="wrap_content"
-                android:layout_alignParentLeft="true"
+                android:layout_alignParentStart="true"
                 android:gravity="center_vertical"
                 android:contentDescription="@string/message_compose_quoted_text_label"/>
 
@@ -39,10 +39,10 @@
                 android:textAllCaps="true"
                 android:layout_height="match_parent"
                 android:layout_width="wrap_content"
-                android:layout_marginLeft="8dip"
+                android:layout_marginStart="8dip"
                 style="@style/QuotedTextHeaderStyle"
-                android:layout_toRightOf="@+id/include_quoted_text"
-                android:gravity="center_vertical|left"/>
+                android:layout_toEndOf="@+id/include_quoted_text"
+                android:gravity="center_vertical|start"/>
         </RelativeLayout>
 
     </RelativeLayout>

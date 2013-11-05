@@ -27,30 +27,30 @@
     >
     <TextView
         android:id="@+id/message_count"
-        android:layout_alignParentRight="true"
-        android:layout_marginRight="@dimen/mailbox_list_padding_right"
+        android:layout_alignParentEnd="true"
+        android:layout_marginEnd="@dimen/mailbox_list_padding_right"
         style="@style/unreadCount"
         />
     <RelativeLayout
-        android:layout_alignParentLeft="true"
+        android:layout_alignParentStart="true"
         android:layout_centerVertical="true"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginLeft="@dimen/mailbox_list_padding_left"
-        android:layout_toLeftOf="@id/message_count"
+        android:layout_marginStart="@dimen/mailbox_list_padding_left"
+        android:layout_toStartOf="@id/message_count"
         >
         <ImageView
             android:id="@+id/folder_icon"
             android:layout_width="32dip"
             android:layout_height="32dip"
             android:layout_centerVertical="true"
-            android:layout_marginRight="8dip"
+            android:layout_marginEnd="8dip"
             />
         <TextView
             android:id="@+id/mailbox_name"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_toRightOf="@id/folder_icon"
+            android:layout_toEndOf="@id/folder_icon"
             android:layout_centerVertical="true"
             android:ellipsize="end"
             android:singleLine="true"
@@ -63,9 +63,9 @@
         android:id="@+id/color_chip"
         android:layout_width="32dip"
         android:layout_height="8dip"
-        android:layout_marginLeft="@dimen/mailbox_list_padding_left"
+        android:layout_marginStart="@dimen/mailbox_list_padding_left"
         android:layout_alignParentTop="true"
-        android:layout_alignParentLeft="true"
+        android:layout_alignParentStart="true"
         android:visibility="gone"
         />
     <ImageView
@@ -73,7 +73,7 @@
         android:layout_width="16dip"
         android:layout_height="16dip"
         android:layout_alignParentBottom="true"
-        android:layout_alignParentRight="true"
+        android:layout_alignParentEnd="true"
         android:visibility="gone"
         />
 </com.android.email.activity.MailboxListItem>

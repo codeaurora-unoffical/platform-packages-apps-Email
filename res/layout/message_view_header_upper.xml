@@ -40,7 +40,7 @@
         android:layout_width="0dip"
         android:layout_height="wrap_content"
         android:layout_weight="1"
-        android:layout_marginLeft="@dimen/message_header_name_margin"
+        android:layout_marginStart="@dimen/message_header_name_margin"
         >
         <TextView
             android:id="@+id/from_name"
@@ -54,14 +54,14 @@
             android:layout_below="@+id/from_name"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginRight="2dip"
+            android:layout_marginEnd="2dip"
             android:visibility="gone"
             />
         <TextView
             android:id="@+id/from_address"
             style="@style/message_header_sender_address"
             android:layout_below="@+id/from_name"
-            android:layout_toRightOf="@+id/presence"
+            android:layout_toEndOf="@+id/presence"
             android:layout_alignWithParentIfMissing="true"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"

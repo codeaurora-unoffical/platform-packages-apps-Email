@@ -19,8 +19,8 @@
 <resources>
     <!-- Override previous button in really large tablets -->
     <style name="accountSetupTypePrevious" parent="@style/accountSetupButton">
-        <item name="android:layout_toRightOf">@+id/main_content"</item>
-        <item name="android:layout_alignParentRight">true</item>
+        <item name="android:layout_toEndOf">@+id/main_content"</item>
+        <item name="android:layout_alignParentEnd">true</item>
     </style>
 
 </resources>

@@ -20,8 +20,8 @@
     xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:paddingLeft="@dimen/setup_item_inset_left"
-    android:paddingRight="@dimen/setup_item_inset_right" >
+    android:paddingStart="@dimen/setup_item_inset_left"
+    android:paddingEnd="@dimen/setup_item_inset_right" >
     <TextView
         android:id="@+id/account_description_label"
         android:layout_alignParentTop="true"

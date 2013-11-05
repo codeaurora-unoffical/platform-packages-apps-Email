@@ -36,9 +36,9 @@
              android:ellipsize="end"
              android:text="@string/message_view_invite_title"
              android:textAppearance="?android:attr/textAppearanceSmall"
-             android:drawableLeft="@drawable/ic_badge_invite_holo_light"
-             android:layout_marginLeft="12dip"
-             android:layout_alignParentLeft="true"
+             android:drawableStart="@drawable/ic_badge_invite_holo_light"
+             android:layout_marginStart="12dip"
+             android:layout_alignParentStart="true"
              android:layout_centerVertical="true"
              />
 
@@ -50,8 +50,8 @@
              android:ellipsize="end"
              android:text="@string/message_view_invite_view"
              android:textAppearance="?android:attr/textAppearanceSmall"
-             android:layout_marginRight="3dip"
-             android:layout_alignParentRight="true"
+             android:layout_marginEnd="3dip"
+             android:layout_alignParentEnd="true"
              android:layout_centerVertical="true"
              />
     </RelativeLayout>
@@ -68,8 +68,8 @@
          android:layout_height="wrap_content"
          android:layout_width="match_parent"
          android:layout_marginTop="4dip"
-         android:layout_marginLeft="12dip"
-         android:layout_marginRight="6dip"
+         android:layout_marginStart="12dip"
+         android:layout_marginEnd="6dip"
          android:singleLine="true"
          android:ellipsize="end"
          android:text="@string/message_view_invite_text"
@@ -81,8 +81,8 @@
          android:layout_height="44dip"
          android:orientation="horizontal"
          android:gravity="center_vertical"
-         android:layout_marginLeft="12dip"
-         android:layout_marginRight="6dip"
+         android:layout_marginStart="12dip"
+         android:layout_marginEnd="6dip"
          >
 
         <TextView
@@ -90,11 +90,11 @@
              android:layout_width="0dip"
              android:layout_height="wrap_content"
              android:layout_weight="1"
-             android:layout_marginRight="6dip"
+             android:layout_marginEnd="6dip"
              android:text="@string/message_view_invite_accept"
              android:singleLine="true"
              android:textAppearance="?android:attr/textAppearanceSmall"
-             android:drawableLeft="@drawable/btn_yes_off"
+             android:drawableStart="@drawable/btn_yes_off"
              android:gravity="center_vertical"
              android:focusable="true"
              />
@@ -104,11 +104,11 @@
              android:layout_width="0dip"
              android:layout_height="wrap_content"
              android:layout_weight="1"
-             android:layout_marginRight="6dip"
+             android:layout_marginEnd="6dip"
              android:text="@string/message_view_invite_maybe"
              android:singleLine="true"
              android:textAppearance="?android:attr/textAppearanceSmall"
-             android:drawableLeft="@drawable/btn_maybe_off"
+             android:drawableStart="@drawable/btn_maybe_off"
              android:gravity="center_vertical"
              android:focusable="true"
              />
@@ -121,7 +121,7 @@
              android:text="@string/message_view_invite_decline"
              android:singleLine="true"
              android:textAppearance="?android:attr/textAppearanceSmall"
-             android:drawableLeft="@drawable/btn_no_off"
+             android:drawableStart="@drawable/btn_no_off"
              android:gravity="center_vertical"
              android:focusable="true"
              />

@@ -23,7 +23,8 @@ automatically saved by framework.-->
     <!-- To -->
 
     <LinearLayout android:id="@+id/to_content"
-        style="@style/RecipientComposeFieldLayout">
+        style="@style/RecipientComposeFieldLayout"
+        android:layoutDirection="locale">
         <LinearLayout android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:addStatesFromChildren="true"

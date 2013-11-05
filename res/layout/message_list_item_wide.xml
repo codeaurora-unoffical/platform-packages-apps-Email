@@ -30,8 +30,8 @@
         android:id="@+id/checkmark"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginLeft="@dimen/checkmark_left_margin_wide"
-        android:layout_marginRight="16dip"
+        android:layout_marginStart="@dimen/checkmark_left_margin_wide"
+        android:layout_marginEnd="16dip"
         android:layout_gravity="center_vertical"
         android:src="@drawable/btn_check_on_normal_holo_light" />
     <TextView
@@ -47,8 +47,8 @@
         android:id="@+id/reply_state"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginLeft="16dip"
-        android:layout_marginRight="16dip"
+        android:layout_marginStart="16dip"
+        android:layout_marginEnd="16dip"
         android:layout_gravity="center_vertical"
         android:src="@drawable/ic_badge_reply_holo_light" />
     <TextView
@@ -56,8 +56,8 @@
         android:layout_width="0dip"
         android:layout_height="wrap_content"
         android:layout_weight="0.7"
-        android:layout_marginLeft="16dip"
-        android:layout_marginRight="16dip"
+        android:layout_marginStart="16dip"
+        android:layout_marginEnd="16dip"
         android:layout_gravity="center_vertical"
         android:text="@string/long_string"
         android:textSize="@dimen/wide_subject_font_size"
@@ -70,7 +70,7 @@
             android:layout_width="@dimen/message_list_item_color_tip_width"
             android:layout_height="@dimen/message_list_item_color_tip_height"
             android:layout_alignParentTop="true"
-            android:layout_alignParentRight="true"
+            android:layout_alignParentEnd="true"
             android:paddingTop="2dip" />
 
         <ImageView
@@ -78,7 +78,7 @@
             android:layout_width="36dip"
             android:layout_height="16dip"
             android:layout_centerVertical="true"
-            android:layout_marginRight="4dip"
+            android:layout_marginEnd="4dip"
             android:src="@drawable/ic_attachment_holo_light" />
 
         <TextView
@@ -86,7 +86,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_centerVertical="true"
-            android:layout_alignParentRight="true"
+            android:layout_alignParentEnd="true"
             android:text="@string/long_string"
             android:lines="1" />
 
@@ -95,8 +95,8 @@
         android:id="@+id/star"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginLeft="16dip"
-        android:layout_marginRight="@dimen/star_right_margin_wide"
+        android:layout_marginStart="16dip"
+        android:layout_marginEnd="@dimen/star_right_margin_wide"
         android:layout_gravity="center_vertical"
         android:src="@drawable/btn_star_off_normal_email_holo_light" />
 </LinearLayout>
