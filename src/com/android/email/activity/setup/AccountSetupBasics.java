@@ -29,6 +29,7 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.os.SystemProperties;
 import android.text.Editable;
 import android.text.TextUtils;
 import android.text.TextWatcher;
@@ -636,6 +637,10 @@ public class AccountSetupBasics extends AccountSetupActivity
         Account account = SetupData.getAccount();
         account.setSenderName(senderName);
         account.setEmailAddress(senderEmail);
+        String signature = SystemProperties.get("persist.env.email.signature", "");
+        if (signature != null && !signature.isEmpty()) {
+            account.setSignature(signature);
+        }
         account.setDisplayName(senderEmail);
         account.setDefaultAccount(isDefault);
         SetupData.setDefault(isDefault);        // TODO - why duplicated, if already set in account
