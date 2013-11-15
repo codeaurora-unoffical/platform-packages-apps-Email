@@ -23,6 +23,15 @@
         <item name="android:windowContentOverlay">@null</item>
     </style>
 
+    <!-- Use small progressBar in actionbar of MessageCompose Activity-->
+    <style name="MessageComposeTheme" parent="android:style/Theme.Holo.Light">
+            <item name="android:actionBarStyle">@style/Widget.App.ActionBar</item>
+    </style>
+    <style name="Widget.App.ActionBar" parent="android:style/Widget.Holo.Light.ActionBar.Solid">
+            <item name="android:indeterminateProgressStyle">@style/IndeterminateProgress</item>
+    </style>
+    <style name="IndeterminateProgress" parent="@android:style/Widget.ProgressBar.Small"/>
+
     <!-- The headline at the top of every account settings fragments (in preferences) -->
     <!-- TODO these are estimates for the phone UX - final sizes TBD -->
     <style name="accountSettingsHeadline">
