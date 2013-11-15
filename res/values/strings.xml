@@ -48,6 +48,8 @@
     <!-- Menu item/button name -->
     <string name="send_action">Send</string>
     <!-- Menu item/button name -->
+    <string name="loading_attachment">Loading...</string>
+    <!-- Menu item/button name -->
     <string name="reply_action">Reply</string>
     <!-- Menu item/button name -->
     <string name="reply_all_action">Reply all</string>
