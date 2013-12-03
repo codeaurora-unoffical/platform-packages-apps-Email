@@ -23,6 +23,12 @@
         android:alphabeticShortcut="s"
     />
     <item
+        android:id="@+id/loading_attachment"
+        android:title="@string/loading_attachment"
+        android:showAsAction="always"
+        android:enabled="false"
+    />
+    <item
         android:id="@+id/add_attachment"
         android:title="@string/add_file_attachment"
     />
