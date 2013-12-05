@@ -69,11 +69,19 @@ public class MailService extends Service {
         "com.android.email.intent.action.MAIL_SERVICE_CANCEL";
     private static final String ACTION_SEND_PENDING_MAIL =
         "com.android.email.intent.action.MAIL_SERVICE_SEND_PENDING";
+    private static final String ACTION_DELETE_MESSAGE =
+        "org.codeaurora.email.intent.action.MAIL_SERVICE_DELETE_MESSAGE";
+    private static final String ACTION_MOVE_MESSAGE =
+        "org.codeaurora.email.intent.action.MAIL_SERVICE_MOVE_MESSAGE";
+    private static final String ACTION_MESSAGE_READ =
+        "org.codeaurora.email.intent.action.MAIL_SERVICE_MESSAGE_READ";
     private static final String ACTION_DELETE_EXCHANGE_ACCOUNTS =
         "com.android.email.intent.action.MAIL_SERVICE_DELETE_EXCHANGE_ACCOUNTS";
 
     private static final String EXTRA_ACCOUNT = "com.android.email.intent.extra.ACCOUNT";
     private static final String EXTRA_ACCOUNT_INFO = "com.android.email.intent.extra.ACCOUNT_INFO";
+    private static final String EXTRA_MESSAGE_ID = "org.codeaurora.email.intent.extra.MESSAGE_ID";
+    private static final String EXTRA_MESSAGE_INFO = "org.codeaurora.email.intent.extra.MESSAGE_INFO";
     private static final String EXTRA_DEBUG_WATCHDOG = "com.android.email.intent.extra.WATCHDOG";
 
     /** Time between watchdog checks; in milliseconds */
@@ -149,6 +157,7 @@ public class MailService extends Service {
         mStartId = startId;
         String action = intent.getAction();
         final long accountId = intent.getLongExtra(EXTRA_ACCOUNT, -1);
+        Log.d(LOG_TAG, "startCommand for acctid=" + accountId);
 
         mController = Controller.getInstance(this);
         mController.addResultCallback(mControllerCallback);
@@ -244,6 +253,62 @@ public class MailService extends Service {
                 @Override
                 public void run() {
                     mController.sendPendingMessages(accountId);
+                }
+            });
+            stopSelf(startId);
+        }
+        else if (ACTION_DELETE_MESSAGE.equals(action)) {
+            final long messageId = intent.getLongExtra(EXTRA_MESSAGE_ID, -1);
+            if (Email.DEBUG) {
+                Log.d(LOG_TAG, "action: delete message mail");
+                Log.d(LOG_TAG, "action: delmsg "+messageId);
+            }
+            if (accountId <= -1 || messageId <= -1 ){
+               return START_NOT_STICKY;
+            }
+            EmailAsyncTask.runAsyncParallel(new Runnable() {
+                @Override
+                public void run() {
+                    mController.deleteMessage(messageId);
+                }
+            });
+            stopSelf(startId);
+        }
+        else if (ACTION_MOVE_MESSAGE.equals(action)) {
+            final long messageId = intent.getLongExtra(EXTRA_MESSAGE_ID, -1);
+            final long[] messageIds =  { messageId };
+            final int  mailboxType = intent.getIntExtra(EXTRA_MESSAGE_INFO, Mailbox.TYPE_INBOX);
+            final long mailboxId = Mailbox.findMailboxOfType(this, accountId, mailboxType);
+            if (accountId <= -1 || messageId <= -1 || mailboxId <= -1){
+               return START_NOT_STICKY;
+            }
+            if (Email.DEBUG) {
+                Log.d(LOG_TAG, "action:  move message mail");
+                Log.d(LOG_TAG, "action: movemsg "+ messageId + "mailbox: " + mailboxType +
+                                   "accountId: "+accountId + " mailboxId: " + mailboxId);
+            }
+            EmailAsyncTask.runAsyncParallel(new Runnable() {
+                @Override
+                public void run() {
+                    mController.moveMessages(messageIds, mailboxId);
+                }
+            });
+            stopSelf(startId);
+        }
+        else if (ACTION_MESSAGE_READ.equals(action)) {
+            final long messageId = intent.getLongExtra(EXTRA_MESSAGE_ID, -1);
+            if (accountId <= -1 || messageId <= -1 ){
+               return START_NOT_STICKY;
+            }
+            final int flagRead = intent.getIntExtra(EXTRA_MESSAGE_INFO, 0);
+            if (Email.DEBUG) {
+                Log.d(LOG_TAG, "action: set read flag message mail");
+                Log.d(LOG_TAG, "action: delmsg "+ messageId + "flagRead "+ flagRead);
+            }
+            EmailAsyncTask.runAsyncParallel(new Runnable() {
+                @Override
+                public void run() {
+                    mController.setMessageReadSync(messageId, (flagRead == 1) ? true: false );
                 }
             });
             stopSelf(startId);
