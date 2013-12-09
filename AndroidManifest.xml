@@ -335,10 +335,23 @@
         <service
             android:name=".service.MailService"
             android:enabled="false"
+            android:permission="com.android.email.permission.ACCESS_PROVIDER"
             >
             <intent-filter>
                 <action
                     android:name="com.android.email.intent.action.MAIL_SERVICE_WAKEUP" />
+            </intent-filter>
+            <intent-filter>
+                <action
+                    android:name="org.codeaurora.email.intent.action.MAIL_SERVICE_DELETE_MESSAGE" />
+            </intent-filter>
+            <intent-filter>
+                <action
+                    android:name="org.codeaurora.email.intent.action.MAIL_SERVICE_MOVE_MESSAGE" />
+            </intent-filter>
+            <intent-filter>
+                <action
+                    android:name="org.codeaurora.email.intent.action.MAIL_SERVICE_MESSAGE_READ" />
             </intent-filter>
             <intent-filter>
                 <action
