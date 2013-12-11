@@ -47,6 +47,7 @@ import android.view.View;
 import android.view.View.OnClickListener;
 import android.view.View.OnFocusChangeListener;
 import android.view.ViewGroup;
+import android.view.Window;
 import android.webkit.WebView;
 import android.widget.ArrayAdapter;
 import android.widget.CheckBox;
@@ -221,6 +222,7 @@ public class MessageCompose extends Activity implements OnClickListener, OnFocus
     private boolean mMessageLoaded;
     private boolean mInitiallyEmpty;
     private boolean mPickingAttachment = false;
+    private boolean mLoadingAttachment = false;
 
     /**
      * Adding a flag to indicate whether current state is picking contact.
@@ -435,6 +437,7 @@ public class MessageCompose extends Activity implements OnClickListener, OnFocus
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         ActivityHelper.debugSetWindowFlags(this);
+        requestWindowFeature(Window.FEATURE_INDETERMINATE_PROGRESS);
         setContentView(R.layout.message_compose);
 
         mController = Controller.getInstance(getApplication());
@@ -847,6 +850,7 @@ public class MessageCompose extends Activity implements OnClickListener, OnFocus
 
         updateAttachmentContainer();
         mToView.requestFocus();
+        setProgressBarIndeterminateVisibility(false);
     }
 
     /**
@@ -2103,6 +2107,11 @@ public class MessageCompose extends Activity implements OnClickListener, OnFocus
     @Override
     public boolean onPrepareOptionsMenu(Menu menu) {
         menu.findItem(R.id.save).setEnabled(mDraftNeedsSaving);
+        //make send and add_attachment menu unavailable when load attachments
+        menu.findItem(R.id.send).setVisible(!mLoadingAttachment);
+        menu.findItem(R.id.add_attachment).setVisible(!mLoadingAttachment);
+        //show text Loading when load attachments
+        menu.findItem(R.id.loading_attachment).setVisible(mLoadingAttachment);
         MenuItem addCcBcc = menu.findItem(R.id.add_cc_bcc);
         if (addCcBcc != null) {
             // Only available on phones.
@@ -2210,18 +2219,64 @@ public class MessageCompose extends Activity implements OnClickListener, OnFocus
                 && intent.hasExtra(Intent.EXTRA_STREAM)) {
             ArrayList<Parcelable> list = intent.getParcelableArrayListExtra(Intent.EXTRA_STREAM);
             if (list != null) {
-                for (Parcelable parcelable : list) {
-                    Uri uri = (Uri) parcelable;
-                    if (uri != null) {
-                        addAttachmentFromSendIntent(uri);
-                    }
-                }
+                mLoadingAttachment = true;
+                setProgressBarIndeterminateVisibility(true);
+                new LoadAttachmentsFromIntentTask(list).executeSerial((Void[])null);
             }
         }
 
         // Finally - expose fields that were filled in but are normally hidden, and set focus
         showCcBccFieldsIfFilled();
         setNewMessageFocus();
+    }
+
+    //If there are attachments add from intent, use this AsyncTask
+    public class LoadAttachmentsFromIntentTask extends EmailAsyncTask<Void, Void ,Boolean> {
+        private ArrayList<Parcelable> mList;
+
+        public LoadAttachmentsFromIntentTask(ArrayList<Parcelable> list) {
+            super(mTaskTracker);
+            this.mList = list;
+        }
+
+        private void updateUi(Boolean result) {
+            if (!result) {
+                Toast.makeText(MessageCompose.this,R.string.message_compose_attachment_size,
+                        Toast.LENGTH_LONG).show();
+            }
+            setProgressBarIndeterminateVisibility(false);
+            updateAttachmentUi();
+            showCcBccFieldsIfFilled();
+            setNewMessageFocus();
+            mLoadingAttachment = false;
+            invalidateOptionsMenu();
+        }
+
+        @Override
+        protected void onSuccess(Boolean result) {
+            updateUi(result);
+        }
+
+        @Override
+        protected Boolean doInBackground(Void... params) {
+            Boolean isAttachmentSizeCorrect = true;
+            for (Parcelable parcelable : mList) {
+                Uri uri = (Uri) parcelable;
+                if (uri != null) {
+                    final Attachment attachment = loadAttachmentInfo(uri);
+                    final String mimeType = attachment.mMimeType;
+                    if (!TextUtils.isEmpty(mimeType) && MimeUtility.mimeTypeMatches(mimeType,
+                            AttachmentUtilities.ACCEPTABLE_ATTACHMENT_SEND_INTENT_TYPES)) {
+                        if (attachment.mSize > AttachmentUtilities.MAX_ATTACHMENT_UPLOAD_SIZE) {
+                            isAttachmentSizeCorrect = false;
+                            continue;
+                        }
+                        mAttachments.add(attachment);
+                    }
+                }
+            }
+            return isAttachmentSizeCorrect;
+        }
     }
 
     /**
