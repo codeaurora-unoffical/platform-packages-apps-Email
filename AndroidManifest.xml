@@ -234,7 +234,7 @@
             android:name=".activity.MessageCompose"
             android:label="@string/compose_title"
             android:configChanges="screenSize|orientation|keyboardHidden"
-            android:theme="@android:style/Theme.Holo.Light"
+            android:theme="@style/MessageComposeTheme"
             >
             <intent-filter>
                 <action
