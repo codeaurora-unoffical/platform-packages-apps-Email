@@ -821,6 +821,14 @@
     <!-- Provider name for widgets -->
     <string name="widget_provider" translatable="false">com.android.email.provider.WidgetProvider</string>
 
+    <!-- Additional General Preferences Screen -->
+    <!-- Label of general settings category to describe general preferences [CHAR LIMIT=32] -->
+    <string name="category_label_general_settings">General settings</string>
+    <!-- Label of enhancement settings category to describe general preferences [CHAR LIMIT=32] -->
+    <string name="category_label_enhancement_settings">Enhancement settings</string>
+    <!-- General preference: Label of the setting for adding any file as attachment CHAR LIMIT=32] -->
+    <string name="general_preference_add_attachment_label">Add any file as attachment</string>
+
     <!-- In Account setup options & Account Settings screens, Email sync size option. -->
     <string name="account_settings_sync_size_enable">Configure sync size per mail</string>
     <string name="account_settings_sync_size_enable_summary">To save the data, you could configure the sync size per mail of the account</string>

@@ -298,6 +298,14 @@
     <string name="sent_folder_selection_title" msgid="2668629667423320684">"選取 <xliff:g id="ACCOUNT">%s</xliff:g> 的伺服器寄件備份資料夾"</string>
     <string name="account_waiting_for_folders_msg" msgid="6504836014579036923">"正在載入資料夾清單…"</string>
 
+    <!-- Additional General Preferences Screen -->
+    <!-- Label of general settings category to describe general preferences [CHAR LIMIT=32] -->
+    <string name="category_label_general_settings">一般設定</string>
+    <!-- Label of enhancement settings category to describe general preferences [CHAR LIMIT=32] -->
+    <string name="category_label_enhancement_settings">附加設定</string>
+    <!-- General preference: Label of the setting for adding any file as attachment CHAR LIMIT=32] -->
+    <string name="general_preference_add_attachment_label">附加任意文件為附件</string>
+
     <!-- In Account setup options & Account Settings screens, Email sync size option. -->
     <string name="account_settings_sync_size_enable">配置郵件的同步緩存大小</string>
     <string name="account_settings_sync_size_enable_summary">您可以自由定義該帳戶中的郵件的同步緩存大小，從而節約數據流量</string>
