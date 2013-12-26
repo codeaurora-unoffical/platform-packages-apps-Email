@@ -297,4 +297,17 @@
     <string name="trash_folder_selection_title" msgid="8052880079616386185">"選取 <xliff:g id="ACCOUNT">%s</xliff:g> 的伺服器垃圾桶資料夾"</string>
     <string name="sent_folder_selection_title" msgid="2668629667423320684">"選取 <xliff:g id="ACCOUNT">%s</xliff:g> 的伺服器寄件備份資料夾"</string>
     <string name="account_waiting_for_folders_msg" msgid="6504836014579036923">"正在載入資料夾清單…"</string>
+
+    <!-- In Account setup options & Account Settings screens, Email sync size option. -->
+    <string name="account_settings_sync_size_enable">配置郵件的同步緩存大小</string>
+    <string name="account_settings_sync_size_enable_summary">您可以自由定義該帳戶中的郵件的同步緩存大小，從而節約數據流量</string>
+    <string name="account_settings_sync_size_label">選擇同步緩存大小</string>
+    <string name="account_settings_sync_size_category_label">同步緩存大小配置</string>
+
+    <string name="account_setup_options_mail_sync_size_all">同步整封郵件</string>
+    <string name="account_setup_options_mail_sync_size_20k">20KB</string>
+    <string name="account_setup_options_mail_sync_size_100k">100KB</string>
+    <string name="account_setup_options_mail_sync_size_200k">200KB</string>
+    <string name="account_setup_options_mail_sync_size_500k">500KB</string>
+    <string name="account_setup_options_mail_sync_size_1M">1MB</string>
 </resources>

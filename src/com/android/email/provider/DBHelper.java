@@ -53,6 +53,7 @@ import com.android.emailcommon.provider.MessageStateChange;
 import com.android.emailcommon.provider.Policy;
 import com.android.emailcommon.provider.QuickResponse;
 import com.android.emailcommon.service.LegacyPolicySet;
+import com.android.emailcommon.service.SyncSize;
 import com.android.emailcommon.service.SyncWindow;
 import com.android.mail.providers.UIProvider;
 import com.android.mail.utils.LogUtils;
@@ -67,7 +68,6 @@ public final class DBHelper {
     private static final String LEGACY_SCHEME_IMAP = "imap";
     private static final String LEGACY_SCHEME_POP3 = "pop3";
     private static final String LEGACY_SCHEME_EAS = "eas";
-
 
     private static final String WHERE_ID = EmailContent.RECORD_ID + "=?";
 
@@ -163,7 +163,8 @@ public final class DBHelper {
     // Version 122: Need to update Message_Updates and Message_Deletes to match previous.
     // Version 123: Changed the duplicateMesage deletion trigger to ignore accounts that aren't
     //              exchange accounts.
-    public static final int DATABASE_VERSION = 123;
+    // Version 124: Add setSyncSizeEnabled and syncSize columns for Account table.
+    public static final int DATABASE_VERSION = 124;
 
     // Any changes to the database format *must* include update-in-place code.
     // Original version: 2
@@ -481,7 +482,9 @@ public final class DBHelper {
             + AccountColumns.SECURITY_SYNC_KEY + " text, "
             + AccountColumns.SIGNATURE + " text, "
             + AccountColumns.POLICY_KEY + " integer, "
-            + AccountColumns.PING_DURATION + " integer"
+            + AccountColumns.PING_DURATION + " integer, "
+            + AccountColumns.SET_SYNC_SIZE_ENABLED + " integer, "
+            + AccountColumns.SYNC_SIZE + " integer"
             + ");";
         db.execSQL("create table " + Account.TABLE_NAME + s);
         // Deleting an account deletes associated Mailboxes and HostAuth's
@@ -1316,6 +1319,19 @@ public final class DBHelper {
                     dropDeleteDuplicateMessagesTrigger(db);
                 }
                 createDeleteDuplicateMessagesTrigger(mContext, db);
+            }
+            if (oldVersion <= 123) {
+                try {
+                    db.execSQL("alter table " + Account.TABLE_NAME
+                            + " add column " + AccountColumns.SET_SYNC_SIZE_ENABLED + " integer"
+                            + " default " + SyncSize.ENABLED_DEFAULT_VALUE + ";");
+                    db.execSQL("alter table " + Account.TABLE_NAME
+                            + " add column " + AccountColumns.SYNC_SIZE + " integer"
+                            + " default " + SyncSize.SYNC_SIZE_DEFAULT_VALUE + ";");
+                } catch (SQLException e) {
+                    // Shouldn't be needed unless we're debugging and interrupt the process
+                    LogUtils.w(TAG, "Exception upgrading EmailProvider.db from 120 to 121 " + e);
+                }
             }
         }
 

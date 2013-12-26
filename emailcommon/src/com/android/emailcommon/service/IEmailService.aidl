@@ -29,7 +29,6 @@ interface IEmailService {
     oneway void startSync(long mailboxId, boolean userRequest, int deltaMessageCount);
     oneway void stopSync(long mailboxId);
 
-    // TODO: loadMore appears to be unused; if so, delete it.
     oneway void loadMore(long messageId);
     oneway void loadAttachment(IEmailServiceCallback cb, long attachmentId, boolean background);
 
