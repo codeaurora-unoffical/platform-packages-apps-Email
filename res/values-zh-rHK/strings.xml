@@ -305,6 +305,8 @@
     <string name="category_label_enhancement_settings">附加設定</string>
     <!-- General preference: Label of the setting for adding any file as attachment CHAR LIMIT=32] -->
     <string name="general_preference_add_attachment_label">附加任意文件為附件</string>
+    <!-- General preference: Label of the setting for select recipients from Contact CHAR LIMIT=32] -->
+    <string name="general_preference_select_recipients_label">從聯繫人中選擇收件人</string>
 
     <!-- In Account setup options & Account Settings screens, Email sync size option. -->
     <string name="account_settings_sync_size_enable">配置郵件的同步緩存大小</string>
