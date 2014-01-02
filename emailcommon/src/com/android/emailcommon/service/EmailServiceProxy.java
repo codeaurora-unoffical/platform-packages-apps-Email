@@ -310,7 +310,8 @@ public class EmailServiceProxy extends ServiceProxy implements IEmailService {
     }
 
     /**
-     * Request the sync adapter to load a complete message
+     * Request the sync adapter to load a complete message; the service MUST give higher priority
+     * to non-background loading.
      *
      * @param messageId the id of the message to be loaded
      */
@@ -321,7 +322,7 @@ public class EmailServiceProxy extends ServiceProxy implements IEmailService {
             public void run() throws RemoteException {
                 mService.loadMore(messageId);
             }
-        }, "startSync");
+        }, "loadMore");
     }
 
     /**
@@ -429,6 +430,7 @@ public class EmailServiceProxy extends ServiceProxy implements IEmailService {
         //This function should not be used; see {@link EmailProvider#getCapabilities} instead.
         return 0;
     }
+
     /**
      * Request that the account be updated for this service; this call is synchronous
      *
