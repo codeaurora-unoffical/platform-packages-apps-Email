@@ -303,6 +303,8 @@
     <string name="category_label_general_settings">常规设置</string>
     <!-- Label of enhancement settings category to describe general preferences [CHAR LIMIT=32] -->
     <string name="category_label_enhancement_settings">附加设置</string>
+    <!-- General preference: Label of the setting for confirm before forward CHAR LIMIT=32] -->
+    <string name="general_preference_confirm_forward_label">转发前先确认</string>
     <!-- General preference: Label of the setting for adding any file as attachment CHAR LIMIT=32] -->
     <string name="general_preference_add_attachment_label">添加任意文件为附件</string>
     <!-- General preference: Label of the setting for select recipients from Contact CHAR LIMIT=32] -->
