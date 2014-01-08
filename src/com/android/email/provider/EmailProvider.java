@@ -3031,7 +3031,8 @@ public class EmailProvider extends ContentProvider {
                         AccountCapabilities.FOLDER_SERVER_SEARCH |
                         AccountCapabilities.SMART_REPLY |
                         AccountCapabilities.UNDO |
-                        AccountCapabilities.DISCARD_CONVERSATION_DRAFTS;
+                        AccountCapabilities.DISCARD_CONVERSATION_DRAFTS |
+                        AccountCapabilities.SMART_FORWARD;
             } else {
                 capabilities = AccountCapabilities.SYNCABLE_FOLDERS |
                         AccountCapabilities.SMART_REPLY |
@@ -3101,6 +3102,10 @@ public class EmailProvider extends ContentProvider {
         if (projectionColumns.contains(UIProvider.AccountColumns.SettingsColumns.CONFIRM_SEND)) {
             values.put(UIProvider.AccountColumns.SettingsColumns.CONFIRM_SEND,
                     prefs.getConfirmSend() ? "1" : "0");
+        }
+        if (projectionColumns.contains(UIProvider.AccountColumns.SettingsColumns.CONFIRM_FORWARD)) {
+            values.put(UIProvider.AccountColumns.SettingsColumns.CONFIRM_FORWARD,
+                    prefs.getConfirmForward() ? "1" : "0");
         }
         if (projectionColumns.contains(UIProvider.AccountColumns.SettingsColumns.ADD_ATTACHMENT)) {
             values.put(UIProvider.AccountColumns.SettingsColumns.ADD_ATTACHMENT,
@@ -3389,6 +3394,10 @@ public class EmailProvider extends ContentProvider {
         if (colPosMap.containsKey(UIProvider.AccountColumns.SettingsColumns.CONFIRM_SEND)) {
             values[colPosMap.get(UIProvider.AccountColumns.SettingsColumns.CONFIRM_SEND)] =
                     prefs.getConfirmSend() ? 1 : 0;
+        }
+        if (colPosMap.containsKey(UIProvider.AccountColumns.SettingsColumns.CONFIRM_FORWARD)) {
+            values[colPosMap.get(UIProvider.AccountColumns.SettingsColumns.CONFIRM_FORWARD)] =
+                    prefs.getConfirmForward() ? 1 : 0;
         }
         if (colPosMap.containsKey(UIProvider.AccountColumns.SettingsColumns.ADD_ATTACHMENT)) {
             values[colPosMap.get(UIProvider.AccountColumns.SettingsColumns.ADD_ATTACHMENT)] =
