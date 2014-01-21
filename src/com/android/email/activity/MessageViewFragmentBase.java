@@ -1992,6 +1992,9 @@ public abstract class MessageViewFragmentBase extends Fragment implements View.O
             if (attachment != null) {
                 if (progress == 0) {
                     attachment.cancelButton.setVisibility(View.GONE);
+                } else {
+                    attachment.loadButton.setVisibility(View.GONE);
+                    attachment.cancelButton.setVisibility(View.VISIBLE);
                 }
                 attachment.showProgress(progress);
             }
