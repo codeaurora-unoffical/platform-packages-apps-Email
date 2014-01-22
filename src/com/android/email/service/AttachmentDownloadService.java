@@ -919,8 +919,10 @@ public class AttachmentDownloadService extends Service implements Runnable {
         }
 
         // Unregister now that we're done
-        if (mConnectivityManager != null) {
-            mConnectivityManager.unregister();
+        // Make a local copy of the variable so we don't null-crash on service shutdown
+        final EmailConnectivityManager ecm = mConnectivityManager;
+        if (ecm != null) {
+            ecm.unregister();
         }
     }
 
