@@ -545,6 +545,12 @@ public class MessagingController implements Runnable {
 
     }
 
+    void updateSyncTime(final Mailbox mailbox) {
+        ContentValues values = new ContentValues();
+        values.put(EmailContent.MailboxColumns.SYNC_TIME, System.currentTimeMillis());
+        mContext.getContentResolver().update(mailbox.getUri(), values, null, null);
+    }
+
     public void downloadFlagAndEnvelope(final Account account, final Mailbox mailbox,
             Folder remoteFolder, ArrayList<Message> unsyncedMessages,
             HashMap<String, LocalMessageInfo> localMessageMap, final ArrayList<Long> unseenMessages)
@@ -761,6 +767,7 @@ public class MessagingController implements Runnable {
         // 0.  We do not ever sync DRAFTS or OUTBOX (down or up)
         if (mailbox.mType == Mailbox.TYPE_DRAFTS || mailbox.mType == Mailbox.TYPE_OUTBOX) {
             int totalMessages = EmailContent.count(mContext, mailbox.getUri(), null, null);
+            updateSyncTime(mailbox);
             return new SyncResults(totalMessages, unseenMessages);
         }
 
@@ -808,6 +815,7 @@ public class MessagingController implements Runnable {
                 || mailbox.mType == Mailbox.TYPE_DRAFTS) {
             if (!remoteFolder.exists()) {
                 if (!remoteFolder.create(FolderType.HOLDS_MESSAGES)) {
+                    updateSyncTime(mailbox);
                     return new SyncResults(0, unseenMessages);
                 }
             }
@@ -965,6 +973,9 @@ public class MessagingController implements Runnable {
 
         // 14. Clean up and report results
         remoteFolder.close(false);
+
+        // 15. Update the last success sync time.
+        updateSyncTime(mailbox);
 
         return new SyncResults(remoteMessageCount, unseenMessages);
     }
