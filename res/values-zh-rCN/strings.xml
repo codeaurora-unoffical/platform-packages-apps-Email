@@ -305,6 +305,7 @@
     <string name="category_label_enhancement_settings">附加设置</string>
     <!-- General preference: Label of the setting for confirm before forward CHAR LIMIT=32] -->
     <string name="general_preference_confirm_forward_label">转发前先确认</string>
+    <string name="general_preference_confirm_forward_summary">如果邮件中包含一个或者多个附件，转发邮件之前系统需要先下载附件</string>
     <!-- General preference: Label of the setting for adding any file as attachment CHAR LIMIT=32] -->
     <string name="general_preference_add_attachment_label">添加任意文件为附件</string>
     <!-- General preference: Label of the setting for select recipients from Contact CHAR LIMIT=32] -->
