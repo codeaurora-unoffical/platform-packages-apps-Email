@@ -425,13 +425,12 @@ public class AccountCheckSettingsFragment extends Fragment {
             mMode = mode;
             mAccount = checkAccount;
             Log.d(Logging.LOG_TAG,"checkAccount.mHostAuthRecv = " + checkAccount.mHostAuthRecv);
-            Log.d(Logging.LOG_TAG,"checkAccount.mHostAuthRecv.mAddress = " +
-                    checkAccount.mHostAuthRecv.mAddress);
-            mStoreHost = checkAccount.mHostAuthRecv.mAddress;
-            Log.d(Logging.LOG_TAG,"checkAccount.mHostAuthRecv.mPassword = " +
-                    checkAccount.mHostAuthRecv.mPassword);
-            mCheckEmail = checkAccount.mEmailAddress;
-            mCheckPassword = checkAccount.mHostAuthRecv.mPassword;
+            mStoreHost = (checkAccount.mHostAuthRecv != null) ?
+                    checkAccount.mHostAuthRecv.mAddress : "";
+            Log.d(Logging.LOG_TAG,"checkAccount.mEmailAddress = " + checkAccount.mEmailAddress);
+            mCheckEmail = (checkAccount.mEmailAddress != null) ? checkAccount.mEmailAddress : "";
+            mCheckPassword = (checkAccount.mHostAuthRecv != null) ?
+                    checkAccount.mHostAuthRecv.mPassword : "";
             Log.d(Logging.LOG_TAG,"AccountCheckTask end");
         }
 
