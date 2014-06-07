@@ -137,12 +137,8 @@ public class ImapService extends Service {
             if (accountId <= -1 || inboxId <= -1 ){
                return START_NOT_STICKY;
             }
-            try {
-                mBinder.init(context);
-                mBinder.startSync(inboxId,true,0);
-            } catch (RemoteException e){
-                LogUtils.d(Logging.LOG_TAG,"RemoteException " +e);
-            }
+            mBinder.init(context);
+            mBinder.requestSync(inboxId,true,0);
         } else if (ACTION_DELETE_MESSAGE.equals(action)) {
             final long messageId = intent.getLongExtra(EXTRA_MESSAGE_ID, -1);
             if (Logging.LOGD) {
@@ -220,11 +216,6 @@ public class ImapService extends Service {
      */
     private final EmailServiceStub mBinder = new EmailServiceStub() {
         @Override
-        public void loadMore(long messageId) throws RemoteException {
-            // We don't do "loadMore" for IMAP messages; the sync should handle this
-        }
-
-        @Override
         public int searchMessages(long accountId, SearchParams searchParams, long destMailboxId) {
             try {
                 return searchMailboxImpl(getApplicationContext(), accountId, searchParams,
@@ -233,19 +224,6 @@ public class ImapService extends Service {
                 // Ignore
             }
             return 0;
-        }
-
-        @Override
-        public int getCapabilities(Account acct) throws RemoteException {
-            return AccountCapabilities.SYNCABLE_FOLDERS |
-                    AccountCapabilities.FOLDER_SERVER_SEARCH |
-                    AccountCapabilities.UNDO |
-                    AccountCapabilities.DISCARD_CONVERSATION_DRAFTS;
-        }
-
-        @Override
-        public void serviceUpdated(String emailAddress) throws RemoteException {
-            // Not needed
         }
     };
 
