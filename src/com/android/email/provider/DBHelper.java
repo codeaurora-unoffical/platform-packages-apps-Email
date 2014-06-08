@@ -164,7 +164,8 @@ public final class DBHelper {
     // Version 123: Changed the duplicateMesage deletion trigger to ignore accounts that aren't
     //              exchange accounts.
     // Version 124: Add setSyncSizeEnabled and syncSize columns for Account table.
-    public static final int DATABASE_VERSION = 124;
+    // Version 125: Added MAX_ATTACHMENT_SIZE to the account table.
+    public static final int DATABASE_VERSION = 125;
 
     // Any changes to the database format *must* include update-in-place code.
     // Original version: 2
@@ -484,7 +485,8 @@ public final class DBHelper {
             + AccountColumns.POLICY_KEY + " integer, "
             + AccountColumns.PING_DURATION + " integer, "
             + AccountColumns.SET_SYNC_SIZE_ENABLED + " integer, "
-            + AccountColumns.SYNC_SIZE + " integer"
+            + AccountColumns.SYNC_SIZE + " integer, "
+            + AccountColumns.MAX_ATTACHMENT_SIZE + " integer, "
             + ");";
         db.execSQL("create table " + Account.TABLE_NAME + s);
         // Deleting an account deletes associated Mailboxes and HostAuth's
@@ -1331,6 +1333,19 @@ public final class DBHelper {
                 } catch (SQLException e) {
                     // Shouldn't be needed unless we're debugging and interrupt the process
                     LogUtils.w(TAG, "Exception upgrading EmailProvider.db from 120 to 121 " + e);
+                }
+            }
+
+            if (oldVersion <= 124) {
+                try {
+                    db.execSQL("alter table " + Account.TABLE_NAME
+                            + " add column " + AccountColumns.MAX_ATTACHMENT_SIZE +" integer" + ";");
+                    final ContentValues cv = new ContentValues(1);
+                    cv.put(AccountColumns.MAX_ATTACHMENT_SIZE, 0);
+                    db.update(Account.TABLE_NAME, cv, null, null);
+                } catch (final SQLException e) {
+                    // Shouldn't be needed unless we're debugging and interrupt the process
+                    LogUtils.w(TAG, "Exception upgrading EmailProvider.db from v123 to v124", e);
                 }
             }
         }

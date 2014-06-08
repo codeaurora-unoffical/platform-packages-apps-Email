@@ -54,7 +54,6 @@ import com.android.emailcommon.service.IEmailServiceCallback;
 import com.android.emailcommon.service.SyncSize;
 import com.android.emailcommon.utility.AttachmentUtilities;
 import com.android.mail.providers.UIProvider;
-import com.android.mail.providers.UIProvider.AccountCapabilities;
 import com.android.mail.providers.UIProvider.AttachmentState;
 import com.android.mail.utils.LogUtils;
 
@@ -86,12 +85,8 @@ public class Pop3Service extends Service {
             final long inboxId = Mailbox.findMailboxOfType(context, accountId,
                     Mailbox.TYPE_INBOX);
             LogUtils.d(TAG, "account id is: " + accountId + ", inbox id is: " + inboxId);
-            try {
-                mBinder.init(context);
-                mBinder.startSync(inboxId, true, 0);
-            } catch (RemoteException e) {
-                LogUtils.e(TAG, "RemoteException " + e);
-            }
+            mBinder.init(context);
+            mBinder.requestSync(inboxId, true, 0);
         }
 
         return Service.START_STICKY;
@@ -102,20 +97,14 @@ public class Pop3Service extends Service {
      */
     private final EmailServiceStub mBinder = new EmailServiceStub() {
         @Override
-        public int getCapabilities(Account acct) throws RemoteException {
-            return AccountCapabilities.UNDO |
-                    AccountCapabilities.DISCARD_CONVERSATION_DRAFTS;
-        }
-
-        @Override
-        public void loadAttachment(final IEmailServiceCallback callback, final long attachmentId,
-                final boolean background) throws RemoteException {
+        public void loadAttachment(final IEmailServiceCallback callback, final long accountId,
+                final long attachmentId, final boolean background) throws RemoteException {
             Attachment att = Attachment.restoreAttachmentWithId(mContext, attachmentId);
             if (att == null || att.mUiState != AttachmentState.DOWNLOADING) return;
             long inboxId = Mailbox.findMailboxOfType(mContext, att.mAccountKey, Mailbox.TYPE_INBOX);
             if (inboxId == Mailbox.NO_MAILBOX) return;
             // We load attachments during a sync
-            startSync(inboxId, true, 0);
+            requestSync(inboxId, true, 0);
         }
 
         @Override
@@ -166,11 +155,6 @@ public class Pop3Service extends Service {
             } catch (IOException ioe) {
                 LogUtils.d(Logging.LOG_TAG, "Pop3Service loadMore: ", ioe);
             }
-        }
-
-        @Override
-        public void serviceUpdated(String emailAddress) throws RemoteException {
-            // Not required for POP3
         }
     };
 
