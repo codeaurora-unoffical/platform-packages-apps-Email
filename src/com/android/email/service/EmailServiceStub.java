@@ -33,7 +33,6 @@ import com.android.email.provider.AccountReconciler;
 import com.android.email.provider.Utilities;
 import com.android.email.service.EmailServiceUtils.EmailServiceInfo;
 import com.android.email2.ui.MailActivityEmail;
-import com.android.emailcommon.Api;
 import com.android.emailcommon.Logging;
 import com.android.emailcommon.TrafficFlags;
 import com.android.emailcommon.internet.MimeBodyPart;
@@ -63,7 +62,6 @@ import com.android.emailcommon.service.SearchParams;
 import com.android.emailcommon.utility.AttachmentUtilities;
 import com.android.emailcommon.utility.Utility;
 import com.android.mail.providers.UIProvider;
-import com.android.mail.providers.UIProvider.DraftType;
 import com.android.mail.utils.LogUtils;
 
 import java.util.HashSet;
@@ -99,10 +97,7 @@ public abstract class EmailServiceStub extends IEmailService.Stub implements IEm
         return null;
     }
 
-    @Deprecated
-    @Override
-    public void startSync(long mailboxId, boolean userRequest, int deltaMessageCount)
-            throws RemoteException {
+    protected void requestSync(long mailboxId, boolean userRequest, int deltaMessageCount) {
         final Mailbox mailbox = Mailbox.restoreMailboxWithId(mContext, mailboxId);
         if (mailbox == null) return;
         final Account account = Account.restoreAccountWithId(mContext, mailbox.mAccountKey);
@@ -123,11 +118,6 @@ public abstract class EmailServiceStub extends IEmailService.Stub implements IEm
         ContentResolver.requestSync(acct, EmailContent.AUTHORITY, extras);
         LogUtils.i(Logging.LOG_TAG, "requestSync EmailServiceStub startSync %s, %s",
                 account.toString(), extras.toString());
-    }
-
-    @Override
-    public void stopSync(long mailboxId) throws RemoteException {
-        // Not required
     }
 
     /**
@@ -184,11 +174,7 @@ public abstract class EmailServiceStub extends IEmailService.Stub implements IEm
             mContext.getContentResolver().update(uri, cv, null, null);
         }
 
-        try {
-            startSync(mailbox.mId, true, 0);
-        } catch (RemoteException e) {
-            LogUtils.d(Logging.LOG_TAG, "RemoteException " + e);
-        }
+            requestSync(mailbox.mId, true, 0);
     }
 
     /**
@@ -298,8 +284,8 @@ public abstract class EmailServiceStub extends IEmailService.Stub implements IEm
     }
 
     @Override
-    public void loadAttachment(final IEmailServiceCallback cb, final long attachmentId,
-            final boolean background) throws RemoteException {
+    public void loadAttachment(final IEmailServiceCallback cb, final long accountId,
+            final long attachmentId, final boolean background) throws RemoteException {
         Folder remoteFolder = null;
         try {
             //1. Check if the attachment is already here and return early in that case
@@ -531,37 +517,13 @@ public abstract class EmailServiceStub extends IEmailService.Stub implements IEm
             }
             // If we just created the inbox, sync it
             if (inboxId != -1) {
-                startSync(inboxId, true, 0);
+                requestSync(inboxId, true, 0);
             }
         }
     }
 
     @Override
-    public boolean createFolder(long accountId, String name) throws RemoteException {
-        // Not required
-        return false;
-    }
-
-    @Override
-    public boolean deleteFolder(long accountId, String name) throws RemoteException {
-        // Not required
-        return false;
-    }
-
-    @Override
-    public boolean renameFolder(long accountId, String oldName, String newName)
-            throws RemoteException {
-        // Not required
-        return false;
-    }
-
-    @Override
     public void setLogging(int on) throws RemoteException {
-        // Not required
-    }
-
-    @Override
-    public void hostChanged(long accountId) throws RemoteException {
         // Not required
     }
 
@@ -582,16 +544,20 @@ public abstract class EmailServiceStub extends IEmailService.Stub implements IEm
     }
 
     @Override
-    public int getApiLevel() throws RemoteException {
-        return Api.LEVEL;
-    }
-
-    @Override
     public int searchMessages(long accountId, SearchParams params, long destMailboxId)
             throws RemoteException {
         // Not required
         return 0;
     }
+
+    @Override
+    public void pushModify(long accountId) throws RemoteException {
+        LogUtils.e(Logging.LOG_TAG, "pushModify invalid for account type for %d", accountId);
+    }
+
+    @Override
+    public void sync(final long accountId, final boolean updateFolderList,
+            final int mailboxType, final long[] folders) {}
 
     @Override
     public void sendMail(long accountId) throws RemoteException {
