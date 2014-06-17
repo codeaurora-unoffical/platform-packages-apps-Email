@@ -486,7 +486,7 @@ public final class DBHelper {
             + AccountColumns.PING_DURATION + " integer, "
             + AccountColumns.SET_SYNC_SIZE_ENABLED + " integer, "
             + AccountColumns.SYNC_SIZE + " integer, "
-            + AccountColumns.MAX_ATTACHMENT_SIZE + " integer, "
+            + AccountColumns.MAX_ATTACHMENT_SIZE + " integer"
             + ");";
         db.execSQL("create table " + Account.TABLE_NAME + s);
         // Deleting an account deletes associated Mailboxes and HostAuth's
