@@ -672,7 +672,7 @@
 
         <service
             android:name=".service.LegacyImapAuthenticatorService"
-            android:exported="false"
+            android:exported="true"
             android:enabled="true"
             >
             <intent-filter>
@@ -705,6 +705,7 @@
 
         <!-- Legacy authenticators, etc. can be added below. OEMs may remove these -->
 
+        <!-- This component will be disabled in the code. -->
         <service
             android:name=".service.LegacyEmailAuthenticatorService"
             android:exported="false"
@@ -720,6 +721,7 @@
                 />
         </service>
 
+        <!-- This component will be disabled in the code. -->
         <service
             android:name=".service.LegacyEasAuthenticatorService"
             android:exported="false"
