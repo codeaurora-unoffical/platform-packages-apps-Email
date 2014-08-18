@@ -4937,6 +4937,8 @@ public class EmailProvider extends ContentProvider {
                 // Ignore for now
             } else if (UIProvider.ConversationColumns.CONVERSATION_INFO.equals(columnName)) {
                 // Email's conversation info is generated, not stored, so just ignore this update
+            } else if (UIProvider.ConversationOperations.OPERATION_KEY.equals(columnName)) {
+                // To avoid crash in monkey test, just ignore this update
             } else {
                 throw new IllegalArgumentException("Can't update " + columnName + " in message");
             }
