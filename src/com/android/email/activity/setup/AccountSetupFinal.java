@@ -1133,6 +1133,8 @@ public class AccountSetupFinal extends AccountSetupActivity
         }
         account.setFlags(newFlags);
         account.setSyncInterval(fragment.getCheckFrequencyValue());
+        account.setSyncSizeEnabled(fragment.getSyncSizeEnabledValue());
+        account.setSyncSize(fragment.getSyncSizeValue());
         final Integer syncWindowValue = fragment.getAccountSyncWindowValue();
         if (syncWindowValue != null) {
             account.setSyncLookback(syncWindowValue);

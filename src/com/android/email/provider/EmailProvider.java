@@ -18,6 +18,7 @@ package com.android.email.provider;
 
 import android.accounts.AccountManager;
 import android.appwidget.AppWidgetManager;
+import android.content.AsyncQueryHandler;
 import android.content.ComponentCallbacks;
 import android.content.ComponentName;
 import android.content.ContentProvider;
@@ -270,6 +271,7 @@ public class EmailProvider extends ContentProvider
     private static final int UI_PURGE_FOLDER = UI_BASE + 20;
     private static final int UI_INBOX = UI_BASE + 21;
     private static final int UI_ACCTSETTINGS = UI_BASE + 22;
+    private static final int UI_MESSAGE_LOAD_MORE = UI_BASE + 23;
 
     private static final int BODY_BASE = 0xA000;
     private static final int BODY = BODY_BASE;
@@ -1207,6 +1209,8 @@ public class EmailProvider extends ContentProvider
             sURIMatcher.addURI(EmailContent.AUTHORITY, "pickSentFolder/#",
                     ACCOUNT_PICK_SENT_FOLDER);
             sURIMatcher.addURI(EmailContent.AUTHORITY, "uipurgefolder/#", UI_PURGE_FOLDER);
+            sURIMatcher.addURI(EmailContent.AUTHORITY, "uimessageloadmore/#",
+                    UI_MESSAGE_LOAD_MORE);
         }
     }
 
@@ -1326,6 +1330,9 @@ public class EmailProvider extends ContentProvider
                     return c;
                 case UI_FOLDER_REFRESH:
                     c = uiFolderRefresh(getMailbox(uri), 0);
+                    return c;
+                case UI_MESSAGE_LOAD_MORE:
+                    c = uiMessageLoadMore(getMessageFromLastSegment(uri));
                     return c;
                 case MAILBOX_NOTIFICATION:
                     c = notificationQuery(uri);
@@ -2644,6 +2651,10 @@ public class EmailProvider extends ContentProvider
                 .add(UIProvider.MessageColumns.VIA_DOMAIN, null)
                 .add(UIProvider.MessageColumns.CLIPPED, "0")
                 .add(UIProvider.MessageColumns.PERMALINK, null)
+                .add(UIProvider.MessageColumns.MESSAGE_FLAG_LOADED,
+                        EmailContent.MessageColumns.FLAG_LOADED)
+                .add(UIProvider.MessageColumns.MESSAGE_LOAD_MORE_URI,
+                        uriWithFQId("uimessageloadmore", Message.TABLE_NAME))
                 .build();
         }
         return sMessageViewMap;
@@ -2842,6 +2853,7 @@ public class EmailProvider extends ContentProvider
                         AttachmentColumns.UI_DOWNLOADED_SIZE)
                 .add(UIProvider.AttachmentColumns.CONTENT_URI, AttachmentColumns.CONTENT_URI)
                 .add(UIProvider.AttachmentColumns.FLAGS, AttachmentColumns.FLAGS)
+                .add(UIProvider.AttachmentColumns.CONTENT_ID, AttachmentColumns.CONTENT_ID)
                 .build();
         }
         return sAttachmentMap;
@@ -3010,6 +3022,7 @@ public class EmailProvider extends ContentProvider
                     uiAtt.size = (int) att.mSize;
                     uiAtt.uri = uiUri("uiattachment", att.mId);
                     uiAtt.flags = att.mFlags;
+                    uiAtt.partId = att.mContentId;
                     uiAtts.add(uiAtt);
                 }
                 values.put(UIProvider.MessageColumns.ATTACHMENTS, "@?"); // @ for literal
@@ -3033,6 +3046,7 @@ public class EmailProvider extends ContentProvider
             final Uri attachmentListUri = uiUri("uiattachments", messageId).buildUpon()
                     .appendQueryParameter("MessageLoaded",
                             msg.mFlagLoaded == Message.FLAG_LOADED_COMPLETE ? "true" : "false")
+                    .appendQueryParameter(AttachmentColumns.CONTENT_ID, "null")
                     .build();
             values.put(UIProvider.MessageColumns.ATTACHMENT_LIST_URI, attachmentListUri.toString());
         }
@@ -3890,7 +3904,7 @@ public class EmailProvider extends ContentProvider
      * @return the SQLite query to be executed on the EmailProvider database
      */
     private static String genQueryAttachments(String[] uiProjection,
-            List<String> contentTypeQueryParameters) {
+            List<String> contentTypeQueryParameters, List<String> contentIdQueryParameters) {
         // MAKE SURE THESE VALUES STAY IN SYNC WITH GEN QUERY ATTACHMENT
         ContentValues values = new ContentValues(1);
         values.put(UIProvider.AttachmentColumns.SUPPORTS_DOWNLOAD_AGAIN, 1);
@@ -3922,6 +3936,27 @@ public class EmailProvider extends ContentProvider
             }
             sb.append(")");
         }
+
+        // Filter for in-line attachments.
+        // The filter works by adding IS operators for each content id you wish to request.
+        if (contentIdQueryParameters != null && !contentIdQueryParameters.isEmpty()) {
+            final int size = contentIdQueryParameters.size();
+            sb.append("AND (");
+            for (int i = 0; i < size; i++) {
+                final String contentId = contentIdQueryParameters.get(i);
+                sb.append(AttachmentColumns.CONTENT_ID + " IS ");
+                if (contentId.toLowerCase().equals("null")) {
+                    sb.append("NULL");
+                } else {
+                    sb.append("'" + contentId + "'");
+                }
+                if (i != size - 1) {
+                    sb.append(" OR ");
+                }
+            }
+            sb.append(")");
+        }
+
         return sb.toString();
     }
 
@@ -4579,8 +4614,11 @@ public class EmailProvider extends ContentProvider
             case UI_ATTACHMENTS:
                 final List<String> contentTypeQueryParameters =
                         uri.getQueryParameters(PhotoContract.ContentTypeParameters.CONTENT_TYPE);
-                c = db.rawQuery(genQueryAttachments(uiProjection, contentTypeQueryParameters),
-                        new String[] {id});
+                final List<String> contentIdQueryParameters =
+                        uri.getQueryParameters(AttachmentColumns.CONTENT_ID);
+                String sqlAttachments = genQueryAttachments(uiProjection,
+                        contentTypeQueryParameters, contentIdQueryParameters);
+                c = db.rawQuery(sqlAttachments, new String[] {id});
                 c = new AttachmentsCursor(context, c);
                 notifyUri = UIPROVIDER_ATTACHMENTS_NOTIFIER.buildUpon().appendPath(id).build();
                 break;
@@ -5307,7 +5345,8 @@ public class EmailProvider extends ContentProvider
      */
     private void handleMessageUpdateNotifications(final Uri uri, final String messageId,
             final ContentValues values) {
-        if (!uri.getBooleanQueryParameter(IS_UIPROVIDER, false)) {
+        if (values.containsKey(MessageColumns.FLAG_ATTACHMENT)
+                || !uri.getBooleanQueryParameter(IS_UIPROVIDER, false)) {
             notifyUIConversation(uri);
         }
         notifyUIMessage(messageId);
@@ -5405,6 +5444,49 @@ public class EmailProvider extends ContentProvider
 
         notifyUIFolder(mailboxId, accountId);
         return deletedCount;
+    }
+
+    private Cursor uiMessageLoadMore(final Message msg) {
+        if (msg == null) return null;
+
+        // Start the fetch process running in the background
+        new AsyncTask<Void, Void, Void>() {
+            @Override
+            public Void doInBackground(Void... params) {
+                LogUtils.d(TAG, "Run load more task. account: " + msg.mAccountKey);
+
+                // Delete the dummy attachment from the database.
+                deleteDummyAttachment(msg.mId);
+                // As the delete action will not notify the UI change.
+                // We will notify it with the message id.
+                notifyUI(UIPROVIDER_ATTACHMENTS_NOTIFIER, msg.mId);
+
+                // Update the message loaded status as partial before load entire content.
+                Utilities.updateMessageLoadStatus(getContext(), msg.mId,
+                        EmailContent.Message.FLAG_LOADED_PARTIAL_FETCHING);
+
+                final EmailServiceProxy service =
+                        EmailServiceUtils.getServiceForAccount(getContext(), msg.mAccountKey);
+                if (service != null) {
+                    try {
+                        service.loadMore(msg.mId);
+                    } catch (RemoteException e) {
+                        LogUtils.e("loadMore", "RemoteException", e);
+                    }
+                }
+                return null;
+            }
+        }.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
+
+        return null;
+    }
+
+    private int deleteDummyAttachment(long messageId) {
+        StringBuilder selection = new StringBuilder()
+                .append(AttachmentColumns.MESSAGE_KEY + "=" + messageId)
+                .append(" AND ")
+                .append(AttachmentColumns.FLAGS + "&" + Attachment.FLAG_DUMMY_ATTACHMENT + "!=0");
+        return delete(Attachment.CONTENT_URI, selection.toString(), null);
     }
 
     public static final String PICKER_UI_ACCOUNT = "picker_ui_account";

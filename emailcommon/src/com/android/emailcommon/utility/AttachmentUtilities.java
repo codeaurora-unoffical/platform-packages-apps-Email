@@ -31,6 +31,8 @@ import android.webkit.MimeTypeMap;
 import com.android.emailcommon.Logging;
 import com.android.emailcommon.provider.EmailContent.Attachment;
 import com.android.emailcommon.provider.EmailContent.AttachmentColumns;
+import com.android.emailcommon.provider.EmailContent.Body;
+import com.android.emailcommon.provider.EmailContent.BodyColumns;
 import com.android.emailcommon.provider.EmailContent.Message;
 import com.android.emailcommon.provider.EmailContent.MessageColumns;
 import com.android.mail.providers.UIProvider;
@@ -398,15 +400,30 @@ public class AttachmentUtilities {
         final ContentValues cv = new ContentValues();
         final long attachmentId = attachment.mId;
         final long accountId = attachment.mAccountKey;
-        final String contentUri;
-        final long size;
+        String contentUri = null;
+        long size = attachment.mSize;
 
         try {
             ContentResolver resolver = context.getContentResolver();
-            if (attachment.mUiDestination == UIProvider.AttachmentDestination.CACHE) {
+            // As we changed the save attachment process to use the cached content first,
+            // if the cached do not exist, we will try to download it. Then under this case
+            // we need save the content to cache and external both.
+            boolean savedToCache = false;
+            if (!Utility.attachmentExists(context, attachment)) {
                 Uri attUri = getAttachmentUri(accountId, attachmentId);
                 size = copyFile(in, resolver.openOutputStream(attUri));
                 contentUri = attUri.toString();
+                savedToCache = true;
+            }
+
+            // If the destination is cache, we will do nothing, but if it is external,
+            // we will try to save the content to external again.
+            if (attachment.mUiDestination == UIProvider.AttachmentDestination.CACHE) {
+                if (!savedToCache) {
+                    LogUtils.w(Logging.LOG_TAG,
+                            "Trying to save an attachment to cache, but do not saved?");
+                    throw new IOException();
+                }
             } else if (Utility.isExternalStorageMounted()) {
                 if (TextUtils.isEmpty(attachment.mFileName)) {
                     // TODO: This will prevent a crash but does not surface the underlying problem
@@ -460,5 +477,21 @@ public class AttachmentUtilities {
             cv.put(AttachmentColumns.UI_STATE, UIProvider.AttachmentState.FAILED);
         }
         context.getContentResolver().update(uri, cv, null, null);
+
+        // If this is an inline attachment, update the body
+        if (contentUri != null && attachment.mContentId != null) {
+            Body body = Body.restoreBodyWithMessageId(context, attachment.mMessageKey);
+            if (body != null && body.mHtmlContent != null) {
+                cv.clear();
+                String html = body.mHtmlContent;
+                String contentIdRe =
+                        "\\s+(?i)src=\"cid(?-i):\\Q" + attachment.mContentId + "\\E\"";
+                String srcContentUri = " src=\"" + contentUri + "\"";
+                html = html.replaceAll(contentIdRe, srcContentUri);
+                cv.put(BodyColumns.HTML_CONTENT, html);
+                context.getContentResolver().update(
+                        ContentUris.withAppendedId(Body.CONTENT_URI, body.mId), cv, null, null);
+            }
+        }
     }
 }

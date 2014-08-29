@@ -34,6 +34,7 @@ import android.os.Parcel;
 import android.os.Parcelable;
 import android.os.RemoteException;
 import android.provider.BaseColumns;
+import android.text.TextUtils;
 
 import com.android.emailcommon.utility.TextUtilities;
 import com.android.emailcommon.utility.Utility;
@@ -827,8 +828,9 @@ public abstract class EmailContent {
          */
         public static final String FLAG_LOADED_SELECTION =
             MessageColumns.FLAG_LOADED + " IN ("
-            +     Message.FLAG_LOADED_PARTIAL + "," + Message.FLAG_LOADED_COMPLETE
-            +     ")";
+            +     Message.FLAG_LOADED_PARTIAL + "," + Message.FLAG_LOADED_COMPLETE + ","
+            +     Message.FLAG_LOADED_PARTIAL_COMPLETE + ","
+            +     Message.FLAG_LOADED_PARTIAL_FETCHING +")";
 
         public static final String ALL_FAVORITE_SELECTION =
             MessageColumns.FLAG_FAVORITE + "=1 AND "
@@ -939,8 +941,10 @@ public abstract class EmailContent {
         public static final int FLAG_LOADED_UNLOADED = 0;
         public static final int FLAG_LOADED_COMPLETE = 1;
         public static final int FLAG_LOADED_PARTIAL = 2;
-        public static final int FLAG_LOADED_DELETED = 3;
-        public static final int FLAG_LOADED_UNKNOWN = 4;
+        public static final int FLAG_LOADED_PARTIAL_COMPLETE = 3;
+        public static final int FLAG_LOADED_PARTIAL_FETCHING = 4;
+        public static final int FLAG_LOADED_DELETED = 5;
+        public static final int FLAG_LOADED_UNKNOWN = 6;
 
         // Bits used in mFlags
         // The following three states are mutually exclusive, and indicate whether the message is an
@@ -1277,6 +1281,38 @@ public abstract class EmailContent {
                 selection.append(" AND ").append(Message.FLAG_LOADED_SELECTION);
             }
             return selection.toString();
+        }
+
+        /**
+         * Update the HTML content if there is in-line or viewable parts of this message.
+         *
+         * @param context
+         * @param htmlContent
+         * @param msgId
+         * @return null if do not update
+         */
+        public static String updateHTMLContentForInlineAtts(Context context,
+                String htmlContent, long msgId) {
+            if (TextUtils.isEmpty(htmlContent) || msgId < 1) return null;
+
+            boolean update = false;
+            Attachment[] attachments = Attachment.restoreAttachmentsWithMessageId(context, msgId);
+            for (Attachment att : attachments) {
+                if (TextUtils.isEmpty(att.mContentId)) continue;
+
+                // This attachment is viewable part, need update the body content.
+                if (TextUtils.isEmpty(att.getContentUri())) {
+                    LogUtils.e(Logging.LOG_TAG, "Found one inline att, but contentUri is null.");
+                    continue;
+                }
+
+                // update the contents.
+                String contentIdRe = "\\s+(?i)src=\"cid(?-i):\\Q" + att.mContentId + "\\E\"";
+                String srcContentUri = " src=\"" + att.getContentUri() + "\"";
+                htmlContent = htmlContent.replaceAll(contentIdRe, srcContentUri);
+                update = true;
+            }
+            return update ? htmlContent : null;
         }
 
         public void setFlags(boolean quotedReply, boolean quotedForward) {
@@ -1721,6 +1757,10 @@ public abstract class EmailContent {
         public static final String MAX_ATTACHMENT_SIZE = "maxAttachmentSize";
         // Current duration of the Exchange ping
         public static final String PING_DURATION = "pingDuration";
+        // If the user could set the sync size for this account.
+        public static final String SET_SYNC_SIZE_ENABLED = "setSyncSizeEnabled";
+        // The sync size for each message of this account.
+        public static final String SYNC_SIZE = "syncSize";
     }
 
     public interface QuickResponseColumns extends BaseColumns {
