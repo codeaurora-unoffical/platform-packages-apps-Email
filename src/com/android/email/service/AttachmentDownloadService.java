@@ -345,7 +345,8 @@ public class AttachmentDownloadService extends Service implements Runnable {
                         + " entries");
             }
 
-            Iterator<DownloadRequest> iterator = mDownloadSet.descendingIterator();
+            DownloadSet cloneDownloadSet = (DownloadSet)mDownloadSet.clone();
+            Iterator<DownloadRequest> iterator = cloneDownloadSet.descendingIterator();
             // First, start up any required downloads, in priority order
             while (iterator.hasNext() &&
                     (mDownloadsInProgress.size() < MAX_SIMULTANEOUS_DOWNLOADS)) {
