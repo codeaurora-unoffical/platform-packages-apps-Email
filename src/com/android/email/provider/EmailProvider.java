@@ -3376,7 +3376,8 @@ public class EmailProvider extends ContentProvider
                         AccountCapabilities.FOLDER_SERVER_SEARCH |
                         AccountCapabilities.SMART_REPLY |
                         AccountCapabilities.UNDO |
-                        AccountCapabilities.DISCARD_CONVERSATION_DRAFTS;
+                        AccountCapabilities.DISCARD_CONVERSATION_DRAFTS |
+                        AccountCapabilities.SMART_FORWARD;
             } else {
                 capabilities = AccountCapabilities.SYNCABLE_FOLDERS |
                         AccountCapabilities.SMART_REPLY |
@@ -3463,6 +3464,10 @@ public class EmailProvider extends ContentProvider
         if (projectionColumns.contains(UIProvider.AccountColumns.SettingsColumns.CONFIRM_SEND)) {
             values.put(UIProvider.AccountColumns.SettingsColumns.CONFIRM_SEND,
                     mailPrefs.getConfirmSend() ? "1" : "0");
+        }
+        if (projectionColumns.contains(UIProvider.AccountColumns.SettingsColumns.CONFIRM_FORWARD)) {
+            values.put(UIProvider.AccountColumns.SettingsColumns.CONFIRM_FORWARD,
+                    mailPrefs.getConfirmForward() ? "1" : "0");
         }
         if (projectionColumns.contains(UIProvider.AccountColumns.SettingsColumns.SWIPE)) {
             values.put(UIProvider.AccountColumns.SettingsColumns.SWIPE,
@@ -3721,6 +3726,10 @@ public class EmailProvider extends ContentProvider
         if (colPosMap.containsKey(UIProvider.AccountColumns.SettingsColumns.CONFIRM_SEND)) {
             values[colPosMap.get(UIProvider.AccountColumns.SettingsColumns.CONFIRM_SEND)] =
                     mailPrefs.getConfirmSend() ? 1 : 0;
+        }
+        if (colPosMap.containsKey(UIProvider.AccountColumns.SettingsColumns.CONFIRM_FORWARD)) {
+            values[colPosMap.get(UIProvider.AccountColumns.SettingsColumns.CONFIRM_FORWARD)] =
+                    mailPrefs.getConfirmForward() ? 1 : 0;
         }
         if (colPosMap.containsKey(UIProvider.AccountColumns.SettingsColumns.DEFAULT_INBOX)) {
             values[colPosMap.get(UIProvider.AccountColumns.SettingsColumns.DEFAULT_INBOX)] =
@@ -6238,7 +6247,8 @@ public class EmailProvider extends ContentProvider
                 PreferenceKeys.SNAP_HEADER_MODE.equals(key) ||
                 PreferenceKeys.CONFIRM_DELETE.equals(key) ||
                 PreferenceKeys.CONFIRM_ARCHIVE.equals(key) ||
-                PreferenceKeys.CONFIRM_SEND.equals(key)) {
+                PreferenceKeys.CONFIRM_SEND.equals(key) ||
+                PreferenceKeys.CONFIRM_FORWARD.equals(key)) {
             notifyUI(UIPROVIDER_ALL_ACCOUNTS_NOTIFIER, null);
         }
     }
