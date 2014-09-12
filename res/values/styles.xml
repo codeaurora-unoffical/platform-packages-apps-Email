@@ -28,8 +28,8 @@
         <item name="android:textSize">@dimen/setup_headline_text_size</item>
         <item name="android:textColor">@color/account_setup_headline_color</item>
         <item name="android:paddingTop">@dimen/setup_headline_padding_top</item>
-        <item name="android:paddingLeft">@dimen/setup_headline_padding_side</item>
-        <item name="android:paddingRight">@dimen/setup_headline_padding_side</item>
+        <item name="android:paddingStart">@dimen/setup_headline_padding_side</item>
+        <item name="android:paddingEnd">@dimen/setup_headline_padding_side</item>
     </style>
 
     <style name="account_setup_lower_headline">
@@ -39,13 +39,13 @@
     </style>
 
     <style name="oauth_label">
-        <item name="android:paddingLeft">10dp</item>
+        <item name="android:paddingStart">10dp</item>
     </style>
 
     <style name="account_setup_fragment_container">
         <item name="android:paddingTop">@dimen/setup_fragment_padding_top</item>
-        <item name="android:paddingLeft">@dimen/setup_fragment_padding_side</item>
-        <item name="android:paddingRight">@dimen/setup_fragment_padding_side</item>
+        <item name="android:paddingStart">@dimen/setup_fragment_padding_side</item>
+        <item name="android:paddingEnd">@dimen/setup_fragment_padding_side</item>
         <item name="android:paddingBottom">@dimen/setup_fragment_padding_bottom</item>
     </style>
 
@@ -103,29 +103,29 @@
     <style name="account_setup_checkbox">
         <item name="android:layout_marginTop">@dimen/setup_checkbox_margin_top</item>
         <item name="android:layout_marginBottom">@dimen/setup_checkbox_margin_bottom</item>
-        <item name="android:layout_marginLeft">@dimen/setup_checkbox_margin_side</item>
-        <item name="android:layout_marginRight">@dimen/setup_checkbox_margin_side</item>
+        <item name="android:layout_marginStart">@dimen/setup_checkbox_margin_side</item>
+        <item name="android:layout_marginEnd">@dimen/setup_checkbox_margin_side</item>
     </style>
 
     <!-- Client certificate UI. See also values in styles-ldrtl.xml -->
     <!-- Client certificate 'select' button, see also styles-ldrtl.xml -->
     <style name="client_certificate_button"
            parent="account_setup_text_button">
-        <item name="android:layout_alignParentRight">true</item>
-        <item name="android:paddingLeft">20dp</item>
-        <item name="android:paddingRight">20dp</item>
+        <item name="android:layout_alignParentEnd">true</item>
+        <item name="android:paddingStart">20dp</item>
+        <item name="android:paddingEnd">20dp</item>
    </style>
 
     <!-- Client certificate title, see also styles-ldrtl.xml -->
     <style name="client_certificate_title">
-        <item name="android:layout_alignParentLeft">true</item>
-        <item name="android:layout_toLeftOf">@id/select_button</item>
+        <item name="android:layout_alignParentStart">true</item>
+        <item name="android:layout_toStartOf">@id/select_button</item>
     </style>
 
     <!-- Client certificate alias, see also styles-ldrtl.xml -->
     <style name="client_certificate_alias">
-        <item name="android:layout_alignParentLeft">true</item>
-        <item name="android:layout_toLeftOf">@id/select_button</item>
+        <item name="android:layout_alignParentStart">true</item>
+        <item name="android:layout_toStartOf">@id/select_button</item>
     </style>
 
     <!-- Quick response text -->
@@ -135,7 +135,7 @@
     </style>
 
     <style name="clear_authentication_button">
-        <item name="android:layout_marginLeft">8dp</item>
+        <item name="android:layout_marginStart">8dp</item>
     </style>
 </resources>
 

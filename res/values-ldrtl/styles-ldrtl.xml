@@ -21,8 +21,8 @@
     <style name="client_certificate_button"
            parent="account_setup_text_button">
         <item name="android:layout_alignParentEnd">true</item>
-        <item name="android:paddingLeft">20dp</item>
-        <item name="android:paddingRight">20dp</item>
+        <item name="android:paddingStart">20dp</item>
+        <item name="android:paddingEnd">20dp</item>
     </style>
 
     <!-- Client certificate title, see also styles.xml -->
@@ -38,11 +38,11 @@
     </style>
 
     <style name="oauth_label">
-        <item name="android:paddingRight">10dp</item>
+        <item name="android:paddingEnd">10dp</item>
     </style>
 
     <style name="clear_authentication_button">
-        <item name="android:layout_marginRight">8dp</item>
+        <item name="android:layout_marginEnd">8dp</item>
     </style>
 
 </resources>

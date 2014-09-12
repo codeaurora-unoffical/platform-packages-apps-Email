@@ -51,8 +51,8 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:paddingTop="@dimen/setup_nav_button_padding_top"
-            android:paddingLeft="@dimen/setup_nav_button_padding_side"
-            android:paddingRight="@dimen/setup_nav_button_padding_side"
+            android:paddingStart="@dimen/setup_nav_button_padding_side"
+            android:paddingEnd="@dimen/setup_nav_button_padding_side"
             android:paddingBottom="@dimen/setup_nav_button_padding_bottom"
             android:orientation="horizontal">
             <ImageButton

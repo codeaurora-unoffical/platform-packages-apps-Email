@@ -27,7 +27,7 @@
         <TextView
             android:layout_height="wrap_content"
             android:layout_width="wrap_content"
-            android:layout_marginRight="16dip"
+            android:layout_marginEnd="16dip"
             android:text="@string/account_setup_incoming_username_label"
             style="@style/account_setup_label_text" />
         <EditText
@@ -44,7 +44,7 @@
             android:id="@+id/authentication_label"
             android:layout_height="wrap_content"
             android:layout_width="wrap_content"
-            android:layout_marginRight="16dip"
+            android:layout_marginEnd="16dip"
             android:contentDescription="@string/authentication_label"
             android:text="@string/authentication_label"
             android:layout_gravity="center_vertical"
@@ -68,7 +68,7 @@
         <TextView
             android:layout_height="wrap_content"
             android:layout_width="wrap_content"
-            android:layout_marginRight="16dip"
+            android:layout_marginEnd="16dip"
             android:text="@string/account_setup_exchange_device_id_label"
             style="@style/account_setup_label_text" />
         <!-- TODO - when adding back in styles, this should be slightly different (was "medium") -->
@@ -87,7 +87,7 @@
             android:id="@+id/account_server_label"
             android:layout_height="wrap_content"
             android:layout_width="wrap_content"
-            android:layout_marginRight="16dip"
+            android:layout_marginEnd="16dip"
             android:text="@string/account_setup_incoming_server_label"
             style="@style/account_setup_label_text" />
         <!-- Note: we use inputType=textUri as the closest approximation to a server name -->
@@ -103,7 +103,7 @@
         <TextView
             android:layout_height="wrap_content"
             android:layout_width="wrap_content"
-            android:layout_marginRight="16dip"
+            android:layout_marginEnd="16dip"
             android:text="@string/account_setup_incoming_security_label"
             style="@style/account_setup_label_text" />
         <Spinner
@@ -117,7 +117,7 @@
         <TextView
             android:layout_height="wrap_content"
             android:layout_width="wrap_content"
-            android:layout_marginRight="16dip"
+            android:layout_marginEnd="16dip"
             android:text="@string/account_setup_incoming_port_label"
             style="@style/account_setup_label_text" />
         <EditText
@@ -134,7 +134,7 @@
             android:id="@+id/account_delete_policy_label"
             android:layout_height="wrap_content"
             android:layout_width="wrap_content"
-            android:layout_marginRight="16dip"
+            android:layout_marginEnd="16dip"
             android:text="@string/account_setup_incoming_delete_policy_label"
             style="@style/account_setup_label_text" />
         <Spinner
@@ -149,7 +149,7 @@
         <TextView
             android:layout_height="wrap_content"
             android:layout_width="wrap_content"
-            android:layout_marginRight="16dip"
+            android:layout_marginEnd="16dip"
             android:text="@string/account_setup_incoming_imap_path_prefix_label"
             style="@style/account_setup_label_text" />
         <EditText

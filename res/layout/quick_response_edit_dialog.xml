@@ -19,9 +19,9 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:focusable="true"
-    android:paddingLeft="4dip"
+    android:paddingStart="4dip"
     android:paddingTop="6dip"
-    android:paddingRight="4dip"
+    android:paddingEnd="4dip"
     android:paddingBottom="6dip">
 
     <EditText

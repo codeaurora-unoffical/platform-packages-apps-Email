@@ -32,8 +32,8 @@
         <FrameLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:paddingLeft="@dimen/settings_fragment_padding_side"
-            android:paddingRight="@dimen/settings_fragment_padding_side" >
+            android:paddingStart="@dimen/settings_fragment_padding_side"
+            android:paddingEnd="@dimen/settings_fragment_padding_side" >
 
             <include layout="@layout/account_setup_incoming_fragment" />
 
