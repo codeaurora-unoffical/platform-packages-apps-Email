@@ -396,7 +396,8 @@ public class MailboxSettings extends PreferenceActivity {
 
             // Update the title with the mailbox name.
             final ActionBar actionBar = getActivity().getActionBar();
-            final String mailboxName = mMailbox.mDisplayName;
+            final int mailboxType = mMailbox.mType;
+            final String mailboxName = getMailboxDisplayName(mailboxType, mMailbox.mDisplayName);
             if (actionBar != null) {
                 actionBar.setTitle(mailboxName);
                 actionBar.setSubtitle(getString(R.string.mailbox_settings_activity_title));
@@ -469,6 +470,42 @@ public class MailboxSettings extends PreferenceActivity {
                     return null;
                 }
             }.executeSerial((Void [])null);
+        }
+
+        /**
+         * Returns a name from Resources
+         * @param mailboxType value for the folder.
+         * @param defaultName a deafult name.
+         * @return a name to use as the display name.
+         */
+        private String getMailboxDisplayName(int mailboxType, String defaultName) {
+            final int resId;
+            switch (mailboxType) {
+                case Mailbox.TYPE_INBOX:
+                    resId = R.string.mailbox_name_display_inbox;
+                    break;
+                case Mailbox.TYPE_OUTBOX:
+                    resId = R.string.mailbox_name_display_outbox;
+                    break;
+                case Mailbox.TYPE_DRAFTS:
+                    resId = R.string.mailbox_name_display_drafts;
+                    break;
+                case Mailbox.TYPE_TRASH:
+                    resId = R.string.mailbox_name_display_trash;
+                    break;
+                case Mailbox.TYPE_SENT:
+                    resId = R.string.mailbox_name_display_sent;
+                    break;
+                case Mailbox.TYPE_STARRED:
+                    resId = R.string.mailbox_name_display_starred;
+                    break;
+                case Mailbox.TYPE_UNREAD:
+                    resId = R.string.mailbox_name_display_unread;
+                    break;
+                default:
+                    return defaultName;
+            }
+            return getString(resId);
         }
     }
 }
