@@ -281,7 +281,7 @@
         <activity
             android:name=".activity.setup.EmailPreferenceActivity"
             android:label="@string/settings_activity_title"
-            android:exported="false" >
+            android:exported="true" >
             <intent-filter>
                 <action android:name="android.intent.action.EDIT" />
                 <action android:name="android.intent.action.VIEW" />
