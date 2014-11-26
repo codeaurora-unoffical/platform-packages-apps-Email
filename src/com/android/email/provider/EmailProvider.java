@@ -1427,6 +1427,10 @@ public class EmailProvider extends ContentProvider
                     id = uri.getPathSegments().get(2);
                     c = uiQuickResponseAccount(projection, id);
                     break;
+                case ATTACHMENTS_CACHED_FILE_ACCESS:
+                    final String where = AttachmentColumns.CACHED_FILE + "=" + uri.toString();
+                    c = db.query(tableName, projection, where, null, null, null, null, limit);
+                    break;
                 default:
                     throw new IllegalArgumentException("Unknown URI " + uri);
             }
