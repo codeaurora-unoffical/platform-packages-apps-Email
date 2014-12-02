@@ -18,6 +18,7 @@ package com.android.email.activity.setup;
 
 import android.app.ActionBar;
 import android.app.Fragment;
+import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
@@ -53,7 +54,7 @@ public class EmailPreferenceActivity extends MailPreferenceActivity {
     // Intent extras for our internal activity launch
     private static final String EXTRA_ENABLE_DEBUG = "AccountSettings.enable_debug";
     // STOPSHIP: Do not ship with the debug menu allowed.
-    private static final boolean DEBUG_MENU_ALLOWED = false;
+    private static final boolean DEBUG_MENU_ALLOWED = true;
 
     // Intent extras for launch directly from system account manager
     // NOTE: This string must match the one in res/xml/account_preferences.xml
@@ -72,6 +73,16 @@ public class EmailPreferenceActivity extends MailPreferenceActivity {
     private boolean mShowDebugMenu;
     private Uri mFeedbackUri;
     private MenuItem mFeedbackMenuItem;
+
+    /**
+     * Launch generic settings and pre-enable the debug preferences
+     */
+    public static void actionSettingsWithDebug(Context fromContext) {
+        final Intent i = new Intent(fromContext, EmailPreferenceActivity.class);
+        i.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        i.putExtra(EXTRA_ENABLE_DEBUG, true);
+        fromContext.startActivity(i);
+    }
 
     @Override
     public Intent getIntent() {
