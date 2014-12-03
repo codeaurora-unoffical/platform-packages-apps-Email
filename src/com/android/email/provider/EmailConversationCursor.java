@@ -28,8 +28,10 @@ import android.text.format.DateUtils;
 import android.text.util.Rfc822Token;
 import android.text.util.Rfc822Tokenizer;
 
+import com.android.email.R;
 import com.android.emailcommon.Logging;
 import com.android.emailcommon.mail.Address;
+import com.android.emailcommon.provider.Account;
 import com.android.emailcommon.provider.EmailContent;
 import com.android.emailcommon.provider.Mailbox;
 import com.android.mail.browse.ConversationCursorOperationListener;
@@ -84,12 +86,13 @@ public class EmailConversationCursor extends CursorWrapper implements
                 if (mailbox.mSyncInterval == 0
                         && (Mailbox.isSyncableType(mailbox.mType)
                         || mailbox.mType == Mailbox.TYPE_SEARCH)
-                        && !TextUtils.isEmpty(mailbox.mServerId) &&
+                        && !TextUtils.isEmpty(mailbox.mServerId)
                         // TODO: There's potentially a race condition here.
                         // Consider merging this check with the auto-sync code in respond.
-                        System.currentTimeMillis() - mailbox.mSyncTime
-                                > AUTO_REFRESH_INTERVAL_MS) {
-                    // This will be syncing momentarily
+                        && System.currentTimeMillis() - mailbox.mSyncTime
+                                > AUTO_REFRESH_INTERVAL_MS
+                        && loadsFromServer(context, mailbox)) {
+                // This will be syncing momentarily
                     mExtras.putInt(UIProvider.CursorExtraKeys.EXTRA_STATUS,
                             UIProvider.CursorStatus.LOADING);
                 } else {
@@ -241,5 +244,31 @@ public class EmailConversationCursor extends CursorWrapper implements
         final ContentResolver resolver = mContext.getContentResolver();
         final Uri purgeUri = EmailProvider.uiUri("uipurgefolder", mMailboxId);
         resolver.delete(purgeUri, null, null);
+    }
+
+    /**
+     * @return whether or not this mailbox retrieves its data from the server (as opposed to
+     *     just a local mailbox that is never synced).
+     */
+    private boolean loadsFromServer(Context context, Mailbox m) {
+        LogUtils.i("EmailConversationCursor", "Try to check if this mailbox " + m.mId
+                + " need loads from server.");
+
+        String protocol = Account.getProtocol(context, m.mAccountKey);
+        String legacyImapProtocol = context.getString(R.string.protocol_legacy_imap);
+        String pop3Protocol = context.getString(R.string.protocol_pop3);
+        String easProtocol = context.getString(R.string.protocol_eas);
+        boolean res = false;
+        if (legacyImapProtocol.equals(protocol)) {
+            res = m.mType != Mailbox.TYPE_DRAFTS
+                    && m.mType != Mailbox.TYPE_OUTBOX
+                    && m.mType != Mailbox.TYPE_SEARCH;
+        } else if (pop3Protocol.equals(protocol)) {
+            res = Mailbox.TYPE_INBOX == m.mType;
+        } else if (easProtocol.equals(protocol)) {
+            res = true;
+        }
+
+        return res;
     }
 }
