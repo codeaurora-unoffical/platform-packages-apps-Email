@@ -655,7 +655,7 @@ public class AccountSetupBasics extends AccountSetupActivity
         if (result == AccountCheckSettingsFragment.CHECK_SETTINGS_OK) {
             AccountSetupOptions.actionOptions(this, mSetupData);
             mReportAccountAuthenticatorError = false;
-            finish();
+            // finish();
         }
     }
 
