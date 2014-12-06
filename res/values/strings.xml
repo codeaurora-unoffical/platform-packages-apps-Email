@@ -838,4 +838,7 @@
     <string name="account_setup_options_mail_sync_size_200k">200KB</string>
     <string name="account_setup_options_mail_sync_size_500k">500KB</string>
     <string name="account_setup_options_mail_sync_size_1M">1MB</string>
+
+    <!-- Customize Email account's signature -->
+    <string name="default_email_signature"></string>
 </resources>
