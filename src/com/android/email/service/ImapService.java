@@ -147,6 +147,9 @@ public class ImapService extends Service {
     public int onStartCommand(Intent intent, int flags, int startId) {
         if (intent == null) return Service.START_STICKY;
 
+        if (intent == null) {
+            return Service.START_STICKY;
+        }
         final String action = intent.getAction();
         if (Logging.LOGD) {
             LogUtils.d(Logging.LOG_TAG, "Action: ", action);
