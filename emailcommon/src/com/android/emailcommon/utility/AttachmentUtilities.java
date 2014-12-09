@@ -31,8 +31,6 @@ import android.webkit.MimeTypeMap;
 import com.android.emailcommon.Logging;
 import com.android.emailcommon.provider.EmailContent.Attachment;
 import com.android.emailcommon.provider.EmailContent.AttachmentColumns;
-import com.android.emailcommon.provider.EmailContent.Body;
-import com.android.emailcommon.provider.EmailContent.BodyColumns;
 import com.android.emailcommon.provider.EmailContent.Message;
 import com.android.emailcommon.provider.EmailContent.MessageColumns;
 import com.android.mail.providers.UIProvider;
@@ -408,23 +406,30 @@ public class AttachmentUtilities {
             // As we changed the save attachment process to use the cached content first,
             // if the cached do not exist, we will try to download it. Then under this case
             // we need save the content to cache and external both.
-            boolean savedToCache = false;
-            if (!Utility.attachmentExists(context, attachment)) {
+            if (attachment.mUiDestination == UIProvider.AttachmentDestination.CACHE
+                    || !Utility.attachmentExists(context, attachment)) {
                 Uri attUri = getAttachmentUri(accountId, attachmentId);
                 size = copyFile(in, resolver.openOutputStream(attUri));
                 contentUri = attUri.toString();
-                savedToCache = true;
+
+                // Update the attachment
+                cv.put(AttachmentColumns.SIZE, size);
+                cv.put(AttachmentColumns.CONTENT_URI, contentUri);
+                cv.put(AttachmentColumns.UI_STATE, UIProvider.AttachmentState.SAVED);
+                context.getContentResolver().update(uri, cv, null, null);
+            } else {
+                // Do not use the input stream, close it.
+                in.close();
             }
 
-            // If the destination is cache, we will do nothing, but if it is external,
-            // we will try to save the content to external again.
-            if (attachment.mUiDestination == UIProvider.AttachmentDestination.CACHE) {
-                if (!savedToCache) {
+            // If the destination is external, try to save the content to external.
+            if (attachment.mUiDestination == UIProvider.AttachmentDestination.EXTERNAL) {
+                if (!Utility.isExternalStorageMounted()) {
                     LogUtils.w(Logging.LOG_TAG,
-                            "Trying to save an attachment to cache, but do not saved?");
+                            "Trying to save an attachment without external storage?");
                     throw new IOException();
                 }
-            } else if (Utility.isExternalStorageMounted()) {
+
                 if (TextUtils.isEmpty(attachment.mFileName)) {
                     // TODO: This will prevent a crash but does not surface the underlying problem
                     // to the user correctly.
@@ -436,7 +441,8 @@ public class AttachmentUtilities {
                         Environment.DIRECTORY_DOWNLOADS);
                 downloads.mkdirs();
                 File file = Utility.createUniqueFile(downloads, attachment.mFileName);
-                size = copyFile(in, new FileOutputStream(file));
+                Uri attUri = getAttachmentUri(accountId, attachmentId);
+                size = copyFile(resolver.openInputStream(attUri), new FileOutputStream(file));
                 String absolutePath = file.getAbsolutePath();
 
                 // Although the download manager can scan media files, scanning only happens
@@ -457,41 +463,17 @@ public class AttachmentUtilities {
                             false /* do not use media scanner */,
                             mimeType, absolutePath, size,
                             true /* show notification */);
-                    contentUri = dm.getUriForDownloadedFile(id).toString();
+                    LogUtils.d(Logging.LOG_TAG, "Save the att to download manager, id = %d", id);
                 } catch (final IllegalArgumentException e) {
                     LogUtils.d(LogUtils.TAG, e, "IAE from DownloadManager while saving attachment");
                     throw new IOException(e);
                 }
-            } else {
-                LogUtils.w(Logging.LOG_TAG,
-                        "Trying to save an attachment without external storage?");
-                throw new IOException();
             }
-
-            // Update the attachment
-            cv.put(AttachmentColumns.SIZE, size);
-            cv.put(AttachmentColumns.CONTENT_URI, contentUri);
-            cv.put(AttachmentColumns.UI_STATE, UIProvider.AttachmentState.SAVED);
         } catch (IOException e) {
             // Handle failures here...
+            cv.clear();
             cv.put(AttachmentColumns.UI_STATE, UIProvider.AttachmentState.FAILED);
-        }
-        context.getContentResolver().update(uri, cv, null, null);
-
-        // If this is an inline attachment, update the body
-        if (contentUri != null && attachment.mContentId != null) {
-            Body body = Body.restoreBodyWithMessageId(context, attachment.mMessageKey);
-            if (body != null && body.mHtmlContent != null) {
-                cv.clear();
-                String html = body.mHtmlContent;
-                String contentIdRe =
-                        "\\s+(?i)src=\"cid(?-i):\\Q" + attachment.mContentId + "\\E\"";
-                String srcContentUri = " src=\"" + contentUri + "\"";
-                html = html.replaceAll(contentIdRe, srcContentUri);
-                cv.put(BodyColumns.HTML_CONTENT, html);
-                context.getContentResolver().update(
-                        ContentUris.withAppendedId(Body.CONTENT_URI, body.mId), cv, null, null);
-            }
+            context.getContentResolver().update(uri, cv, null, null);
         }
     }
 }
