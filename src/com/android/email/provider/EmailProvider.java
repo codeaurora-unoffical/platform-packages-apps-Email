@@ -4863,7 +4863,7 @@ public class EmailProvider extends ContentProvider
                 // If it's one of ours, retrieve the attachment and add it to the list
                 final long attId = Long.parseLong(attUri.getLastPathSegment());
                 final Attachment att = Attachment.restoreAttachmentWithId(context, attId);
-                if (att != null) {
+                if (att != null && !msg.isSaved()) {
                     // We must clone the attachment into a new one for this message; easiest to
                     // use a parcel here
                     final Parcel p = Parcel.obtain();
@@ -4881,6 +4881,12 @@ public class EmailProvider extends ContentProvider
                         hasUnloadedAttachments = true;
                     }
                     atts.add(attClone);
+                } else if (att != null) {
+                    // The message already saved. Add the attachment to list.
+                    atts.add(att);
+                } else {
+                    // TODO: The att is null. When will be here?
+                    LogUtils.w(TAG, "save the message, as attachment is null, and msg is saved.");
                 }
             } else {
                 // Cache the attachment.  This will allow us to send it, if the permissions are
@@ -4903,15 +4909,38 @@ public class EmailProvider extends ContentProvider
         if (!msg.isSaved()) {
             msg.save(context);
         } else {
-            // This is tricky due to how messages/attachments are saved; rather than putz with
-            // what's changed, we'll delete/re-add them
             final ArrayList<ContentProviderOperation> ops =
                     new ArrayList<ContentProviderOperation>();
-            // Delete all existing attachments
-            ops.add(ContentProviderOperation.newDelete(
-                    ContentUris.withAppendedId(Attachment.MESSAGE_ID_URI, msg.mId))
-                    .build());
-            // Delete the body
+
+            if (msg.mAttachments == null) {
+                // As there isn't any attachment, we need delete all the attachment of this msg.
+                ops.add(ContentProviderOperation.newDelete(
+                        ContentUris.withAppendedId(Attachment.MESSAGE_ID_URI, msg.mId))
+                        .build());
+            } else {
+                // Update the attachment items which need save for this message.
+                Attachment[] savedAtts =
+                        Attachment.restoreAttachmentsWithMessageId(context, msg.mId);
+                for (Attachment att : savedAtts) {
+                    int index = msg.mAttachments.indexOf(att);
+                    if (index < 0) {
+                        // If the index < 0, it means the message do not have this attachment.
+                        // So the attachment must be already removed by the user. Then need
+                        // to delete this attachment from database.
+                        ops.add(ContentProviderOperation.newDelete(
+                                ContentUris.withAppendedId(Attachment.CONTENT_URI, att.mId))
+                                .build());
+                    } else {
+                        // If we could find the attachment, it means this attachment already
+                        // saved in the database, and we should not save it again. So remove
+                        // this attachment from the list.
+                        msg.mAttachments.remove(index);
+                    }
+                }
+            }
+
+            // This is tricky due to how messages body is saved; rather than putz with
+            // what's changed, we'll delete/re-add it. Delete the body now.
             ops.add(ContentProviderOperation.newDelete(Body.CONTENT_URI)
                     .withSelection(BodyColumns.MESSAGE_KEY + "=?",
                             new String[] {Long.toString(msg.mId)})
