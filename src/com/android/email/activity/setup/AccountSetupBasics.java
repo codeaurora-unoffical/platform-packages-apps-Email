@@ -27,6 +27,7 @@ import android.app.FragmentTransaction;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.text.Editable;
@@ -226,6 +227,11 @@ public class AccountSetupBasics extends AccountSetupActivity
                 return;
             }
         }
+        if (checkStorageLowMode()) {
+            Toast.makeText(this, R.string.internal_storage_low, Toast.LENGTH_SHORT).show();
+            finish();
+            return;
+        }
 
         setContentView(R.layout.account_setup_basics);
 
@@ -308,6 +314,14 @@ public class AccountSetupBasics extends AccountSetupActivity
         EmailAsyncTask.runAsyncParallel(mOwnerLookupTask);
     }
 
+    private boolean checkStorageLowMode() {
+        // Identify if we are in low storage mode. This works because storage low is a sticky
+        // intent, so we are guaranteed a non-null intent if that broadcast was sent and not
+        // cleared subsequently.
+        final IntentFilter filter = new IntentFilter(Intent.ACTION_DEVICE_STORAGE_LOW);
+        final Intent result = registerReceiver(null, filter);
+        return result != null;
+    }
     @Override
     public void onPause() {
         super.onPause();
