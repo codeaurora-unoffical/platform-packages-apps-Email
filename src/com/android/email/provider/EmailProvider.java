@@ -4880,6 +4880,11 @@ public class EmailProvider extends ContentProvider
                         hasUnloadedAttachments = true;
                     }
                     atts.add(attClone);
+                } else {
+                    final String cachedFileUriMore = AttachmentUtils.cacheAttachmentUri(context,
+                            uiAtt, attachmentFds);
+                    atts.add(convertUiAttachmentToAttachment(uiAtt, cachedFileUriMore,
+                            msg.mAccountKey));
                 }
             } else {
                 // Cache the attachment.  This will allow us to send it, if the permissions are
