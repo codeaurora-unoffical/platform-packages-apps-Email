@@ -706,8 +706,9 @@
             android:authorities="com.android.email.provider;com.android.email.notifier"
             android:exported="true"
             android:permission="com.android.email.permission.ACCESS_PROVIDER"
-            android:label="@string/app_name"
-            />
+            android:label="@string/app_name">
+            <grant-uri-permission android:pathPrefix="/attachment/cachedFile" />
+        </provider>
 
         <!-- Legacy authenticators, etc. can be added below. OEMs may remove these -->
 
