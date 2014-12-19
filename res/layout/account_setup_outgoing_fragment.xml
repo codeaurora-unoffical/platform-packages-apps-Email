@@ -54,6 +54,7 @@
         android:id="@+id/account_require_login"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/setup_label_text_padding_top"
         android:text="@string/account_setup_outgoing_require_login_label" />
     <LinearLayout
         android:id="@+id/account_require_login_settings"

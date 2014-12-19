@@ -79,7 +79,6 @@
             android:id="@+id/account_require_login"
             android:layout_marginTop="16dip"
             android:layout_marginBottom="16dip"
-            android:layout_marginStart="32dip"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="@string/account_setup_outgoing_require_login_label" />

@@ -183,14 +183,6 @@ public class Utilities {
                     // localMessage.mFlagAttachment = true;
                 }
 
-                // update the message's body according to the viewable parts, then commit it.
-                String newContent = EmailContent.Message.updateHTMLContentForInlineAtts(context,
-                        body.mHtmlContent, body.mMessageKey);
-                if (newContent != null) {
-                    body.mHtmlContent = newContent;
-                }
-                saveOrUpdate(body, context);
-
                 // One last update of message with two updated flags
                 localMessage.mFlagLoaded = loadStatus;
 
