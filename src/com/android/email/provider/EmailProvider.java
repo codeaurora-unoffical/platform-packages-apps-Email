@@ -3015,10 +3015,11 @@ public class EmailProvider extends ContentProvider
                     // As of now, they will. If we decide to stop this, then we need to enable
                     // the code below, and then also make the UI_ATTACHMENTS query behave
                     // the same way.
-//
-//                    if (att.mContentId != null && att.getContentUri() != null) {
-//                        continue;
-//                    }
+
+                    if (att.mContentId != null) {
+                        continue;
+                    }
+
                     com.android.mail.providers.Attachment uiAtt =
                             new com.android.mail.providers.Attachment();
                     uiAtt.setName(att.mFileName);

@@ -77,10 +77,9 @@
         android:layout_height="wrap_content"
         android:layout_width="match_parent"
         android:text="@string/account_setup_options_background_attachments_label" />
-    <LinearLayout
+    <RelativeLayout
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal">
+        android:layout_height="wrap_content">
         <CheckBox
             android:id="@+id/account_sync_size_enable"
             style="@style/account_setup_checkbox"
@@ -89,9 +88,11 @@
             android:text="@string/account_settings_sync_size_enable" />
         <Spinner
             android:id="@+id/account_sync_size"
-            android:layout_width="0dip"
-            android:layout_height="match_parent"
-            android:layout_weight="1"
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:layout_toRightOf="@+id/account_sync_size_enable"
+            android:layout_alignTop="@+id/account_sync_size_enable"
+            android:layout_alignBottom="@+id/account_sync_size_enable"
             android:visibility="invisible" />
-    </LinearLayout>
+    </RelativeLayout>
 </LinearLayout>
