@@ -1659,6 +1659,11 @@ public abstract class EmailContent {
         };
 
         @Override
+        public boolean equals(Object o) {
+            return (o instanceof Attachment ? this.mId == ((Attachment) o).mId : super.equals(o));
+        }
+
+        @Override
         public String toString() {
             return "[" + mFileName + ", " + mMimeType + ", " + mSize + ", " + mContentId + ", "
                     + mContentUri + ", " + mCachedFileUri + ", " + mMessageKey + ", "
