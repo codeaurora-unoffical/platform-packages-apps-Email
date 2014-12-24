@@ -4631,7 +4631,10 @@ public class EmailProvider extends ContentProvider {
                         AttachmentUtils.cacheAttachmentUri(context, uiAtt, attachmentFds);
 
                 // Convert external attachment to one of ours and add to the list
-                atts.add(convertUiAttachmentToAttachment(uiAtt, cachedFileUri, msg.mAccountKey));
+                if (cachedFileUri != null) {
+                    atts.add(convertUiAttachmentToAttachment(uiAtt, cachedFileUri,
+                            msg.mAccountKey));
+                }
             }
         }
         if (!atts.isEmpty()) {
@@ -4640,6 +4643,8 @@ public class EmailProvider extends ContentProvider {
             if (hasUnloadedAttachments) {
                 Utility.showToast(context, R.string.message_view_attachment_background_load);
             }
+        } else {
+            msg.mFlagAttachment = false;
         }
         // Save it or update it...
         if (!msg.isSaved()) {
