@@ -435,7 +435,12 @@ public class AttachmentUtilities {
                         Environment.DIRECTORY_DOWNLOADS);
                 downloads.mkdirs();
                 File file = Utility.createUniqueFile(downloads, attachment.mFileName);
-                size = copyFile(in, new FileOutputStream(file));
+                if (savedToCache) {
+                    Uri attUri = getAttachmentUri(accountId, attachmentId);
+                    size = copyFile(resolver.openInputStream(attUri), new FileOutputStream(file));
+                } else {
+                    size = copyFile(in, new FileOutputStream(file));
+                }
                 String absolutePath = file.getAbsolutePath();
 
                 // Although the download manager can scan media files, scanning only happens
