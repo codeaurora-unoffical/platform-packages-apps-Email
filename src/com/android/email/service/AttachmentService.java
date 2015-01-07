@@ -704,6 +704,29 @@ public class AttachmentService extends Service implements Runnable {
             debugTrace("Downloads Map after processQueue");
             dumpInProgressDownloads();
 
+            // FIXME: Before the service maybe stopped or wait 30 minutes, we'd like to double
+            // check the changed queue if empty, and after wait 5 seconds, check again.
+            // This change could fix most problem if it already finished the process queue action,
+            // but the queue add some request again.
+            synchronized(mLock) {
+                try {
+                    if (!sAttachmentChangedQueue.isEmpty()) {
+                        LogUtils.d(LOG_TAG, "The queue is not empty, keep looping.");
+                        continue;
+                    } else {
+                        mLock.wait(5 * DateUtils.SECOND_IN_MILLIS);
+                    }
+                } catch (InterruptedException e) {
+                    // That's ok, will keep looping.
+                    LogUtils.d(LOG_TAG, "Interrupted, if the queue is not empty, keep looping.");
+                } finally {
+                    if (!sAttachmentChangedQueue.isEmpty()) {
+                        LogUtils.d(LOG_TAG, "Finally, the queue is not empty, keep looping.");
+                        continue;
+                    }
+                }
+            }
+
             if (mDownloadQueue.isEmpty() && (mDownloadsInProgress.size() < 1)) {
                 LogUtils.d(LOG_TAG, "Shutting down service. No in-progress or pending downloads.");
                 stopSelf();
