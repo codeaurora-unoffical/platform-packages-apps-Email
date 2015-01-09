@@ -818,7 +818,10 @@
     <string name="no_quick_responses">None available</string>
 
     <!-- Activity name of the compose activity that should be reconciled -->
+    <!-- Do not disable the compose activity even there isn't any account.
     <string name="reconciliation_compose_activity_name" translatable="false">com.android.email.activity.ComposeActivityEmail</string>
+    -->
+    <string name="reconciliation_compose_activity_name" translatable="false"></string>
 
     <!-- Gmail name for redirecting during account setup -->
     <string name="gmail_name">Gmail</string>
