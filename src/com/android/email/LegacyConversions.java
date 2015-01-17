@@ -177,7 +177,11 @@ public class LegacyConversions {
         for (final Part inlinePart : inlineAttachments) {
             final String disposition = MimeUtility.getHeaderParameter(
                     MimeUtility.unfoldAndDecode(inlinePart.getDisposition()), null);
-            if (!TextUtils.isEmpty(disposition)) {
+            final String mimeType = inlinePart.getMimeType();
+            boolean isImage = mimeType != null
+                    && MimeUtility.mimeTypeMatches(mimeType.toLowerCase(), "image/*");
+            // If the inline attachment's mime type is image, add it as one attachment.
+            if (!TextUtils.isEmpty(disposition) || isImage) {
                 // Treat inline parts as attachments
                 addOneAttachment(context, localMessage, inlinePart);
             }
