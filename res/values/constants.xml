@@ -36,4 +36,7 @@
 
     <!-- the email application starts services -->
     <bool name="enable_services">true</bool>
+
+    <!-- Boolean value indicating whether we should allow force create account -->
+    <bool name="enable_force_configure_account">false</bool>
 </resources>
