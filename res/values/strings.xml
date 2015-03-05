@@ -851,4 +851,5 @@
     <string name="account_setup_options_mail_sync_size_1M">1MB</string>
 
     <string name="internal_storage_low">Your device doesn\'t have enough storage space to create account. Please clear storage then retry.</string>
+    <string name="max_input">Your input has reached the maximum limit of <xliff:g id="MAXLIMIT">%s</xliff:g> characters.</string>
 </resources>
