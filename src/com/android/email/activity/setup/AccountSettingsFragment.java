@@ -43,8 +43,10 @@ import android.text.TextUtils;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.MenuInflater;
+import android.widget.EditText;
 
 import com.android.email.R;
+import com.android.email.activity.UiUtilities;
 import com.android.email.SecurityPolicy;
 import com.android.email.provider.EmailProvider;
 import com.android.email.provider.FolderPickerActivity;
@@ -111,6 +113,7 @@ public class AccountSettingsFragment extends PreferenceFragment
     private static final String PREFERENCE_SYSTEM_FOLDERS = "system_folders";
     private static final String PREFERENCE_SYSTEM_FOLDERS_TRASH = "system_folders_trash";
     private static final String PREFERENCE_SYSTEM_FOLDERS_SENT = "system_folders_sent";
+    private static final int INPUT_MAX_LENGTH = 256;
 
     // Request code to start different activities.
     private static final int RINGTONE_REQUEST_CODE = 0;
@@ -677,6 +680,8 @@ public class AccountSettingsFragment extends PreferenceFragment
         mAccountDescription.setSummary(mAccount.getDisplayName());
         mAccountDescription.setText(mAccount.getDisplayName());
         mAccountDescription.setOnPreferenceChangeListener(this);
+        UiUtilities.maxLengthFilter(mContext, (EditText) mAccountDescription.getEditText(),
+                INPUT_MAX_LENGTH);
 
         mAccountName = (EditTextPreference) findPreference(PREFERENCE_NAME);
         String senderName = mAccount.getSenderName();
@@ -685,11 +690,15 @@ public class AccountSettingsFragment extends PreferenceFragment
         mAccountName.setSummary(senderName);
         mAccountName.setText(senderName);
         mAccountName.setOnPreferenceChangeListener(this);
+        UiUtilities.maxLengthFilter(mContext, (EditText) mAccountName.getEditText(),
+                INPUT_MAX_LENGTH);
 
         final String accountSignature = mAccount.getSignature();
         mAccountSignature = (EditTextPreference) findPreference(PREFERENCE_SIGNATURE);
         mAccountSignature.setText(accountSignature);
         mAccountSignature.setOnPreferenceChangeListener(this);
+        UiUtilities.maxLengthFilter(mContext, (EditText) mAccountSignature.getEditText(),
+                INPUT_MAX_LENGTH);
         SettingsUtils.updatePreferenceSummary(mAccountSignature, accountSignature,
                 R.string.preferences_signature_summary_not_set);
 
