@@ -53,7 +53,6 @@ import com.android.email.provider.EmailProvider;
 import com.android.email.provider.FolderPickerActivity;
 import com.android.email.service.EmailServiceUtils;
 import com.android.email.service.EmailServiceUtils.EmailServiceInfo;
-import com.android.email2.ui.MailActivityEmail;
 import com.android.emailcommon.provider.Account;
 import com.android.emailcommon.provider.EmailContent;
 import com.android.emailcommon.provider.EmailContent.AccountColumns;
@@ -374,16 +373,19 @@ public class AccountSettingsFragment extends MailAccountPrefsFragment
                     mAccount.mEmailAddress, mServiceInfo.accountType);
             ContentResolver.setSyncAutomatically(androidAcct, EmailContent.AUTHORITY,
                     (Boolean) newValue);
+            loadSettings();
         } else if (key.equals(PREFERENCE_SYNC_CONTACTS)) {
             final android.accounts.Account androidAcct = new android.accounts.Account(
                     mAccount.mEmailAddress, mServiceInfo.accountType);
             ContentResolver.setSyncAutomatically(androidAcct, ContactsContract.AUTHORITY,
                     (Boolean) newValue);
+            loadSettings();
         } else if (key.equals(PREFERENCE_SYNC_CALENDAR)) {
             final android.accounts.Account androidAcct = new android.accounts.Account(
                     mAccount.mEmailAddress, mServiceInfo.accountType);
             ContentResolver.setSyncAutomatically(androidAcct, CalendarContract.AUTHORITY,
                     (Boolean) newValue);
+            loadSettings();
         } else if (key.equals(PREFERENCE_SYNC_SIZE_ENABLE)) {
             final boolean enabled = (Boolean) newValue;
             mSyncSize.setEnabled(enabled);
@@ -412,7 +414,7 @@ public class AccountSettingsFragment extends MailAccountPrefsFragment
         }
         if (cv.size() > 0) {
             new UpdateTask().run(mContext.getContentResolver(), mAccount.getUri(), cv, null, null);
-            MailActivityEmail.setServicesEnabledAsync(mContext);
+            EmailProvider.setServicesEnabledAsync(mContext);
         }
         return false;
     }
@@ -814,7 +816,7 @@ public class AccountSettingsFragment extends MailAccountPrefsFragment
                     cv.put(AccountColumns.SYNC_SIZE, Integer.parseInt(summary));
                     new UpdateTask().run(mContext.getContentResolver(), mAccount.getUri(), cv,
                             null, null);
-                    MailActivityEmail.setServicesEnabledAsync(mContext);
+                    EmailProvider.setServicesEnabledAsync(mContext);
                     return false;
                 }
             });
