@@ -39,4 +39,8 @@
 
     <!-- Boolean value indicating whether we should allow force create account -->
     <bool name="enable_force_configure_account">false</bool>
+
+    <!-- Boolean value indicating whether to show delete account option in account settings -->
+    <bool name="enable_delete_account_setting">false</bool>
+
 </resources>

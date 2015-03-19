@@ -185,4 +185,14 @@
             android:summary="@string/account_settings_retry_summary" />
     </PreferenceCategory>
 
+    <PreferenceCategory
+        android:key="remove_account"
+        android:title="@string/remove_email_account">
+
+        <Preference
+            android:key="remove_email_account"
+            android:title="@string/remove_email_account"
+            android:summary="@string/remove_email_account" />
+    </PreferenceCategory>
+
 </PreferenceScreen>
