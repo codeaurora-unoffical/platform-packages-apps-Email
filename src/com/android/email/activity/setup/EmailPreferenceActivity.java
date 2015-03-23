@@ -28,6 +28,7 @@ import android.view.Menu;
 import android.view.MenuItem;
 
 import com.android.email.R;
+import com.android.email.setup.AuthenticatorSetupIntentHelper;
 import com.android.emailcommon.utility.IntentUtilities;
 import com.android.mail.providers.UIProvider.EditSettingsExtras;
 import com.android.mail.ui.settings.MailPreferenceActivity;
@@ -212,7 +213,7 @@ public class EmailPreferenceActivity extends MailPreferenceActivity {
     }
 
     private void onAddNewAccount() {
-        final Intent setupIntent = AccountSetupFinal.actionNewAccountIntent(this);
+        final Intent setupIntent = AuthenticatorSetupIntentHelper.actionNewAccountIntent(this);
         startActivity(setupIntent);
     }
 

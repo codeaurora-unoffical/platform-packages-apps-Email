@@ -189,7 +189,7 @@ public final class Account extends EmailContent implements Parcelable {
         AccountColumns.SECURITY_SYNC_KEY,
         AccountColumns.SIGNATURE, AccountColumns.POLICY_KEY, AccountColumns.PING_DURATION,
         AccountColumns.MAX_ATTACHMENT_SIZE, AccountColumns.SET_SYNC_SIZE_ENABLED,
-        AccountColumns.SYNC_SIZE,
+        AccountColumns.SYNC_SIZE
     };
 
     public static final int ACCOUNT_FLAGS_COLUMN_ID = 0;
@@ -235,11 +235,17 @@ public final class Account extends EmailContent implements Parcelable {
                 new String[] {AccountColumns._ID},
                 AccountColumns.EMAIL_ADDRESS + "=?", new String[] {emailAddress},
                 null);
-        if (c == null || !c.moveToFirst()) {
-            return null;
+        try {
+            if (c == null || !c.moveToFirst()) {
+                return null;
+            }
+            final long id = c.getLong(c.getColumnIndex(AccountColumns._ID));
+            return restoreAccountWithId(context, id, observer);
+        } finally {
+            if (c != null) {
+                c.close();
+            }
         }
-        final long id = c.getLong(c.getColumnIndex(AccountColumns._ID));
-        return restoreAccountWithId(context, id, observer);
     }
 
     @Override
