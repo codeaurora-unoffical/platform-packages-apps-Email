@@ -17,10 +17,14 @@
 package com.android.email.activity.setup;
 
 import android.app.Activity;
+import android.app.AlertDialog;
+import android.app.Dialog;
+import android.app.DialogFragment;
 import android.app.LoaderManager;
 import android.content.ContentResolver;
 import android.content.ContentValues;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.Loader;
 import android.content.res.Resources;
@@ -115,6 +119,9 @@ public class AccountSettingsFragment extends MailAccountPrefsFragment
     private static final String PREFERENCE_SYSTEM_FOLDERS = "system_folders";
     private static final String PREFERENCE_SYSTEM_FOLDERS_TRASH = "system_folders_trash";
     private static final String PREFERENCE_SYSTEM_FOLDERS_SENT = "system_folders_sent";
+
+    private static final String PREFERENCE_REMOVE_EMAIL_ACCOUNT = "remove_email_account";
+    private static final String PREFERENCE_CATEGORY_REMOVE_ACCOUNT = "remove_account";
 
     private static final String SAVESTATE_SYNC_INTERVALS = "savestate_sync_intervals";
     private static final String SAVESTATE_SYNC_INTERVAL_STRINGS = "savestate_sync_interval_strings";
@@ -988,6 +995,36 @@ public class AccountSettingsFragment extends MailAccountPrefsFragment
                 dataUsageCategory.removePreference(syncEmail);
             }
         }
+
+        // Delete email account feature
+        final PreferenceCategory removeAccountCategory =
+                (PreferenceCategory) findPreference(PREFERENCE_CATEGORY_REMOVE_ACCOUNT);
+        final Preference prefRemoveAccount = findPreference(PREFERENCE_REMOVE_EMAIL_ACCOUNT);
+
+        if (prefRemoveAccount != null) {
+            if (getResources().getBoolean(R.bool.enable_delete_account_setting)) {
+                prefRemoveAccount.setOnPreferenceClickListener(
+                        new Preference.OnPreferenceClickListener() {
+                            @Override
+                            public boolean onPreferenceClick(
+                                    Preference preference) {
+                                ConfirmDeleteAccountDialogFragment dialogFragment =
+                                        ConfirmDeleteAccountDialogFragment
+                                                .newInstance();
+                                dialogFragment.show(getFragmentManager(),
+                                        ConfirmDeleteAccountDialogFragment.TAG);
+                                return true;
+                            }
+                        });
+            } else {
+                if (removeAccountCategory != null) {
+                    removeAccountCategory.removePreference(prefRemoveAccount);
+                    getPreferenceScreen().removePreference(
+                            removeAccountCategory);
+                }
+
+            }
+        }
     }
 
     /**
@@ -1033,5 +1070,41 @@ public class AccountSettingsFragment extends MailAccountPrefsFragment
         final Intent intent =
                 AccountServerSettingsActivity.getIntentForOutgoing(getActivity(), account);
         getActivity().startActivity(intent);
+    }
+
+    /**
+     * Dialog fragment to confirm delete account action
+     */
+    public static class ConfirmDeleteAccountDialogFragment extends
+            DialogFragment {
+        final static String TAG = "ConfirmDeleteAccountDialogFragment";
+
+        // Force usage of newInstance()
+        public ConfirmDeleteAccountDialogFragment() {
+        }
+
+        public static ConfirmDeleteAccountDialogFragment newInstance() {
+            return new ConfirmDeleteAccountDialogFragment();
+        }
+
+        @Override
+        public Dialog onCreateDialog(Bundle savedInstanceState) {
+
+            return new AlertDialog.Builder(getActivity())
+                    .setTitle(R.string.remove_email_account)
+                    .setMessage(R.string.remove_email_account_message)
+                    .setNegativeButton(android.R.string.cancel, null)
+                    .setPositiveButton(R.string.remove_email_account_continue,
+                            new DialogInterface.OnClickListener() {
+                                @Override
+                                public void onClick(DialogInterface dialog,
+                                        int which) {
+                                    Intent intent = new Intent();
+                                    intent.setAction("android.settings.SETTINGS");
+                                    intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                                    getActivity().startActivity(intent);
+                                }
+                            }).create();
+        }
     }
 }
