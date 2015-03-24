@@ -57,6 +57,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.ConcurrentModificationException;
 
 public class AttachmentDownloadService extends Service implements Runnable {
     public static final String TAG = LogUtils.TAG;
@@ -350,7 +351,13 @@ public class AttachmentDownloadService extends Service implements Runnable {
             // First, start up any required downloads, in priority order
             while (iterator.hasNext() &&
                     (mDownloadsInProgress.size() < MAX_SIMULTANEOUS_DOWNLOADS)) {
-                DownloadRequest req = iterator.next();
+                DownloadRequest req = null;
+                try {
+                    req = iterator.next();
+                } catch(ConcurrentModificationException e) {
+                    LogUtils.w(TAG, "iterator get error: " + e);
+                    break;
+                }
                  // Enforce per-account limit here
                 if (downloadsForAccount(req.accountId) >= MAX_SIMULTANEOUS_DOWNLOADS_PER_ACCOUNT) {
                     if (LogUtils.isLoggable(TAG, LogUtils.DEBUG)) {
