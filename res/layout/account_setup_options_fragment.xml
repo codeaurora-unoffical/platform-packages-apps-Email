@@ -85,7 +85,7 @@
             android:id="@+id/account_sync_size"
             android:layout_width="fill_parent"
             android:layout_height="wrap_content"
-            android:layout_toRightOf="@+id/account_sync_size_enable"
+            android:layout_toEndOf="@+id/account_sync_size_enable"
             android:layout_alignTop="@+id/account_sync_size_enable"
             android:layout_alignBottom="@+id/account_sync_size_enable"
             android:visibility="invisible" />
