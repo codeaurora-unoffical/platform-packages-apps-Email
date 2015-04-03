@@ -18,6 +18,7 @@ package com.android.email.activity.setup;
 
 import com.android.email.R;
 import com.android.mail.providers.UIProvider;
+import com.android.email.activity.UiUtilities;
 
 import android.app.AlertDialog;
 import android.app.Dialog;
@@ -42,6 +43,8 @@ public class EditQuickResponseDialog extends DialogFragment {
     private static final String QUICK_RESPONSE_STRING = "quick_response_edited_string";
     private static final String QUICK_RESPONSE_CONTENT_URI = "quick_response_content_uri";
     private static final String QUICK_RESPONSE_CREATE = "quick_response_create";
+
+    private static final int INPUT_MAX_LENGTH = 256;
 
     // Public no-args constructor needed for fragment re-instantiation
     public EditQuickResponseDialog() {}
@@ -84,6 +87,8 @@ public class EditQuickResponseDialog extends DialogFragment {
         final View wrapper = LayoutInflater.from(getActivity())
                 .inflate(R.layout.quick_response_edit_dialog, null);
         mQuickResponseEditText = (EditText) wrapper.findViewById(R.id.quick_response_text);
+        UiUtilities.maxLengthFilter(getActivity(), (EditText) mQuickResponseEditText,
+                INPUT_MAX_LENGTH);
 
         if (quickResponseSavedString != null) {
             mQuickResponseEditText.setText(quickResponseSavedString);
