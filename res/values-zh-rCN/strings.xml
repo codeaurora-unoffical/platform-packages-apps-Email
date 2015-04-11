@@ -252,4 +252,6 @@
     <string name="account_setup_options_mail_sync_size_200k">200KB</string>
     <string name="account_setup_options_mail_sync_size_500k">500KB</string>
     <string name="account_setup_options_mail_sync_size_1M">1MB</string>
+    <string name="internal_storage_low">"您的设备存储空间不足，无法创建账户，请清理内存之后再试。"</string>
+    <string name="max_input">您输入的字符数已经达到最大长度<xliff:g id="MAXLIMIT">%s</xliff:g>个字符。</string>
 </resources>
