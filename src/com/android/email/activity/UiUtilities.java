@@ -16,6 +16,11 @@
 
 package com.android.email.activity;
 
+import android.widget.EditText;
+import android.text.InputFilter;
+import android.text.Spanned;
+import android.widget.Toast;
+
 import android.app.Activity;
 import android.content.Context;
 import android.content.res.Resources;
@@ -56,5 +61,26 @@ public class UiUtilities {
      */
     public static void setVisibilitySafe(View parent, int viewId, int visibility) {
         setVisibilitySafe(parent.findViewById(viewId), visibility);
+    }
+
+    public static void maxLengthFilter(final Context context, final EditText editText,
+            final int maxLength) {
+        InputFilter[] contentFilters = new InputFilter[1];
+        contentFilters[0] = new InputFilter.LengthFilter(maxLength) {
+            public CharSequence filter(CharSequence source, int start, int end,
+                    Spanned dest, int dstart, int dend) {
+                CharSequence result = super.filter(source, start, end, dest, dstart, dend);
+                if (result != null) {
+                    showWarningToast(context, maxLength);
+                }
+                return result;
+            }
+        };
+        editText.setFilters(contentFilters);
+    }
+
+    public static void showWarningToast(final Context context, int maxLength) {
+        Toast.makeText(context, context.getString(R.string.max_input, maxLength),
+                Toast.LENGTH_SHORT).show();
     }
 }
