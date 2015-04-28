@@ -323,9 +323,14 @@ public class AttachmentDownloadService extends Service implements Runnable {
         /*package*/ synchronized DownloadRequest findDownloadRequest(long id) {
             Iterator<DownloadRequest> iterator = iterator();
             while(iterator.hasNext()) {
-                DownloadRequest req = iterator.next();
-                if (req.attachmentId == id) {
-                    return req;
+                try {
+                    DownloadRequest req = iterator.next();
+                    if (req.attachmentId == id) {
+                        return req;
+                    }
+                } catch(ConcurrentModificationException e) {
+                    LogUtils.w(TAG, "findDownloadRequest iterator get error: " + e);
+                    return null;
                 }
             }
             return null;
@@ -355,7 +360,7 @@ public class AttachmentDownloadService extends Service implements Runnable {
                 try {
                     req = iterator.next();
                 } catch(ConcurrentModificationException e) {
-                    LogUtils.w(TAG, "iterator get error: " + e);
+                    LogUtils.w(TAG, "processQueue iterator get error: " + e);
                     break;
                 }
                  // Enforce per-account limit here
@@ -1039,7 +1044,13 @@ public class AttachmentDownloadService extends Service implements Runnable {
             Iterator<DownloadRequest> iterator = mDownloadSet.descendingIterator();
             // First, start up any required downloads, in priority order
             while (iterator.hasNext()) {
-                DownloadRequest req = iterator.next();
+                DownloadRequest req = null;
+                try {
+                    req = iterator.next();
+                } catch(ConcurrentModificationException e) {
+                    LogUtils.w(TAG, "dump iterator get error: " + e);
+                    break;
+                }
                 pw.println("    Account: " + req.accountId + ", Attachment: " + req.attachmentId);
                 pw.println("      Priority: " + req.priority + ", Time: " + req.time +
                         (req.inProgress ? " [In progress]" : ""));
