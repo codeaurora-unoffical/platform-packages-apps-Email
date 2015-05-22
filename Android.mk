@@ -63,7 +63,6 @@ ifeq (eng,$(TARGET_BUILD_VARIANT))
   LOCAL_PROGUARD_FLAG_FILES += proguard-test.flags
 endif
 
-LOCAL_SDK_VERSION := current
 
 include $(BUILD_PACKAGE)
 
