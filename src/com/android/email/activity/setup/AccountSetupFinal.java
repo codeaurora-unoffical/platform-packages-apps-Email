@@ -933,7 +933,13 @@ public class AccountSetupFinal extends AccountSetupActivity
      */
     private void populateSetupData(String senderName, String senderEmail) {
         final Account account = mSetupData.getAccount();
-        String signature = getResources().getString(R.string.default_email_signature);
+        String signature = "";
+        if (getResources().getBoolean(
+                com.android.internal.R.bool.config_regional_customized_email_signature)) {
+            signature = getResources().getString(R.string.customized_email_signature);
+        } else {
+            signature = getResources().getString(R.string.default_email_signature);
+        }
         if (!TextUtils.isEmpty(signature)) {
             account.setSignature(signature);
         }
