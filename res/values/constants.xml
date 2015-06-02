@@ -38,4 +38,6 @@
     <!-- Boolean value indicating whether to show delete account option in account settings -->
     <bool name="enable_delete_account_setting">false</bool>
 
+    <!-- Enable/Disable auto fill domain name -->
+    <bool name="enable_auto_fill_domain">false</bool>
 </resources>
