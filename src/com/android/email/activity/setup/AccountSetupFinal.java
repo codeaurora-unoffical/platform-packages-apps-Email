@@ -769,7 +769,22 @@ public class AccountSetupFinal extends AccountSetupActivity
      */
     private boolean onBasicsComplete() {
         final AccountSetupBasicsFragment f = (AccountSetupBasicsFragment) getContentFragment();
-        final String email = f.getEmail();
+        String email = f.getEmail();
+        String[] emailParts = new String[2];
+        String domain = null;
+
+        /**
+         * Default domain implementation
+         * Verify default domain feaure is enable/disabled and username provided contains domian
+         * if enabled, append the username string with default domain provided
+         * if disabled, set it to base behavior
+         */
+        if (getResources().getBoolean(R.bool.enable_auto_fill_domain)) {
+            if (!email.contains("@")) {
+                domain = getString(R.string.default_domain);
+                email = email + "@" + getString(R.string.default_domain);
+            }
+        }
 
         // Reset the protocol choice in case the user has back-navigated here
         mSetupData.setIncomingProtocol(this, null);
@@ -780,8 +795,15 @@ public class AccountSetupFinal extends AccountSetupActivity
         }
         mSetupData.setEmail(email);
 
-        final String[] emailParts = email.split("@");
-        final String domain = emailParts[1].trim();
+        /**
+         * Default domain implementation
+         * Verify default domain feaure is enable/disabled
+         * if disabled, set flow to base behavior
+         */
+        if (!getResources().getBoolean(R.bool.enable_auto_fill_domain)) {
+            emailParts = email.split("@");
+            domain = emailParts[1].trim();
+        }
         mProvider = AccountSettingsUtils.findProviderForDomain(this, domain);
         if (mProvider != null) {
             mIsPreConfiguredProvider = true;

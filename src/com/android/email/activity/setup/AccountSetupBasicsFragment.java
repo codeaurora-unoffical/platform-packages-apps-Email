@@ -102,11 +102,31 @@ public class AccountSetupBasicsFragment extends AccountSetupFragment {
         final String emailField = getEmail();
         final Address[] addresses = Address.parse(emailField);
 
-        final boolean emailValid = !TextUtils.isEmpty(emailField)
-                && addresses.length == 1
-                && !TextUtils.isEmpty(addresses[0].getAddress());
+        /**
+         * Default domain implementation
+         * Verify default domain feaure is enable/disabled and username provided contains domian
+         * if enabled, enable 'Next' and 'Manual' setup buttons
+         * if disabled, set flow to base i.e disable 'Next' or 'Manual' setup button until
+         * user provides domain name.
+         */
+        if (!getResources().getBoolean(R.bool.enable_auto_fill_domain)
+                    || (getResources().getString(R.string.default_domain) == null)) {
+            final boolean emailValid = !TextUtils.isEmpty(emailField)
+                    && addresses.length == 1
+                    && !TextUtils.isEmpty(addresses[0].getAddress());
+            setNextButtonEnabled(emailValid);
+        } else {
+            boolean emailValid = false;
+            if (!TextUtils.isEmpty(emailField) && emailField.contains("@")) {
+                emailValid = !TextUtils.isEmpty(emailField)
+                    && addresses.length == 1
+                    && !TextUtils.isEmpty(addresses[0].getAddress());
+            } else {
+                emailValid = !TextUtils.isEmpty(emailField);
+            }
+            setNextButtonEnabled(emailValid);
+        }
 
-        setNextButtonEnabled(emailValid);
     }
 
 
