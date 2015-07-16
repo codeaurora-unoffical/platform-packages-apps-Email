@@ -142,7 +142,7 @@ public abstract class ServiceProxy {
                     }
                     return null;
                 }
-            }.execute();
+            }.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
         }
 
         @Override
