@@ -795,15 +795,9 @@ public class AccountSetupFinal extends AccountSetupActivity
         }
         mSetupData.setEmail(email);
 
-        /**
-         * Default domain implementation
-         * Verify default domain feaure is enable/disabled
-         * if disabled, set flow to base behavior
-         */
-        if (!getResources().getBoolean(R.bool.enable_auto_fill_domain)) {
-            emailParts = email.split("@");
-            domain = emailParts[1].trim();
-        }
+        emailParts = email.split("@");
+        domain = emailParts[1].trim();
+
         mProvider = AccountSettingsUtils.findProviderForDomain(this, domain);
         if (mProvider != null) {
             mIsPreConfiguredProvider = true;
