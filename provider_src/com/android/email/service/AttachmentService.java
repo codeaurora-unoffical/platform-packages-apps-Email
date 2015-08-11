@@ -850,6 +850,7 @@ public class AttachmentService extends Service implements Runnable {
         final int flags = Attachment.FLAG_DOWNLOAD_FORWARD | Attachment.FLAG_DOWNLOAD_USER_REQUEST;
         cv.put(AttachmentColumns.FLAGS, att.mFlags &= ~flags);
         cv.put(AttachmentColumns.UI_STATE, AttachmentState.SAVED);
+        cv.put(AttachmentColumns.UI_DOWNLOADED_SIZE, att.mSize);
         att.update(this, cv);
     }
 

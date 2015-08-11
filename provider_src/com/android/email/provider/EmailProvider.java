@@ -5241,6 +5241,11 @@ public class EmailProvider extends ContentProvider
                     || state == UIProvider.AttachmentState.REDOWNLOADING) {
                 // Set state, try to cancel request
                 values.put(AttachmentColumns.UI_STATE, UIProvider.AttachmentState.NOT_SAVED);
+
+                if (state == UIProvider.AttachmentState.REDOWNLOADING) {
+                    values.put(AttachmentColumns.UI_DOWNLOADED_SIZE, 0);
+                }
+
                 values.put(AttachmentColumns.FLAGS,
                         attachment.mFlags &= ~Attachment.FLAG_DOWNLOAD_USER_REQUEST);
                 attachment.update(context, values);
