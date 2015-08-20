@@ -44,11 +44,13 @@
             android:layout_height="wrap_content"
             android:text="@string/accounts_welcome"
             style="@style/account_setup_info_text" />
-    <EditText
-            android:id="@+id/account_email"
-            android:hint="@string/account_setup_basics_email_label"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:textAppearance="?android:attr/textAppearanceMedium"
-            android:inputType="textEmailAddress" />
+    <MultiAutoCompleteTextView
+        android:id="@+id/account_email"
+        android:hint="@string/account_setup_basics_email_label"
+        android:contentDescription="@string/account_setup_basics_email_label"
+        android:inputType="textEmailAddress"
+        android:imeOptions="actionNext"
+        android:layout_height="wrap_content"
+        android:textAppearance="?android:attr/textAppearanceMedium"
+        android:layout_width="match_parent" />
 </LinearLayout>
