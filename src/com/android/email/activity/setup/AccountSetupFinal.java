@@ -34,6 +34,7 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.Loader;
 import android.database.Cursor;
+import android.os.Build;
 import android.os.Bundle;
 import android.provider.ContactsContract;
 import android.support.annotation.NonNull;
@@ -953,6 +954,10 @@ public class AccountSetupFinal extends AccountSetupActivity
         if (getResources().getBoolean(
                 com.android.internal.R.bool.config_regional_customized_email_signature)) {
             signature = getResources().getString(R.string.customized_email_signature);
+        } else if(getResources().getBoolean(
+               R.bool.config_email_signature_with_brand)) {
+            signature = String.format(getResources().getString(
+                R.string.default_email_signature_with_brand) ,Build.BRAND);
         } else {
             signature = getResources().getString(R.string.default_email_signature);
         }

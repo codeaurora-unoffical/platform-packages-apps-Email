@@ -40,4 +40,7 @@
 
     <!-- Enable/Disable auto fill domain name -->
     <bool name="enable_auto_fill_domain">false</bool>
+
+    <!--Enable brand name in email signature -->
+    <bool name="config_email_signature_with_brand">false</bool>
 </resources>
