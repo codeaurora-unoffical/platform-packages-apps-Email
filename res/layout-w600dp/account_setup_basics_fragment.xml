@@ -56,11 +56,15 @@
                 android:layout_marginEnd="16dip"
                 android:text="@string/account_setup_basics_email_label"
                 style="@style/account_setup_label_large_text" />
-        <EditText
+      <MultiAutoCompleteTextView
                 android:id="@+id/account_email"
+                android:hint="@string/account_setup_basics_email_label"
                 android:contentDescription="@string/account_setup_basics_email_label"
-                android:layout_width="match_parent"
+                android:inputType="textEmailAddress"
+                android:imeOptions="actionDone"
                 android:layout_height="wrap_content"
-                android:inputType="textEmailAddress" />
+                android:textAppearance="?android:attr/textAppearanceMedium"
+                android:layout_width="match_parent" />
+
     </LinearLayout>
 </LinearLayout>
