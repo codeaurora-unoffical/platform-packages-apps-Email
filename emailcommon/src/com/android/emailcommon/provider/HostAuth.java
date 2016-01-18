@@ -383,7 +383,7 @@ public class HostAuth extends EmailContent implements Parcelable {
         if (mPort == PORT_UNKNOWN) {
             boolean useSSL = ((mFlags & FLAG_SSL) != 0);
             if (LEGACY_SCHEME_SMTP.equals(mProtocol)) {
-                mPort = useSSL ? 465 : 587;
+                mPort = useSSL ? 465 : 25;
             }
         }
 
