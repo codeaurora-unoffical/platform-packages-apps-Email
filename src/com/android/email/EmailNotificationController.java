@@ -266,6 +266,10 @@ public class EmailNotificationController implements NotificationController {
             Cursor c = resolver.query(
                     Account.CONTENT_URI, EmailContent.ID_PROJECTION,
                     null, null, null);
+            //to avoid Monkey Test is NullPointException
+            if (c == null) {
+                return;
+            }
             try {
                 while (c.moveToNext()) {
                     long id = c.getLong(EmailContent.ID_PROJECTION_COLUMN);

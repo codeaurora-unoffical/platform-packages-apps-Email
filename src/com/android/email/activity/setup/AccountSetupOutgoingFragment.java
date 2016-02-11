@@ -357,7 +357,11 @@ public class AccountSetupOutgoingFragment extends AccountServerBaseFragment
                 account.mHostAuthSend.mCredentialKey = cred.mId;
             }
         }
-        account.mHostAuthSend.update(context, account.mHostAuthSend.toContentValues());
+        if(account.mHostAuthSend.isSaved()){
+            account.mHostAuthSend.update(context, account.mHostAuthSend.toContentValues());
+        }else {
+            account.mHostAuthSend.save(context);
+        }
         // Update the backup (side copy) of the accounts
         AccountBackupRestore.backup(context);
     }

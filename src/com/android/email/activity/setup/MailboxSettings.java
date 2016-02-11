@@ -84,7 +84,9 @@ public class MailboxSettings extends PreferenceActivity {
     public static Intent getIntent(Context context, Uri foldersUri, Folder inbox) {
         final Intent i = new Intent(context, MailboxSettings.class);
         i.putExtra(EXTRA_FOLDERS_URI, foldersUri);
-        i.putExtra(EXTRA_INBOX_ID, inbox.id);
+        if(inbox != null) {
+            i.putExtra(EXTRA_INBOX_ID, inbox.id);
+        }
         return i;
     }
 
