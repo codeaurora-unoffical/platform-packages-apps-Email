@@ -860,6 +860,8 @@ public final class DBHelper {
         public void onDowngrade(SQLiteDatabase db, int oldVersion, int newVersion) {
             if (oldVersion == 101 && newVersion == 100) {
                 LogUtils.d(TAG, "Downgrade from v101 to v100");
+            } else if (oldVersion == 128 && newVersion == 127) {
+                LogUtils.d(TAG, "Downgrade from v128 to v127");
             } else {
                 super.onDowngrade(db, oldVersion, newVersion);
             }
