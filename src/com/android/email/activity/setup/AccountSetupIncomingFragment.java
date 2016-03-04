@@ -73,6 +73,8 @@ public class AccountSetupIncomingFragment extends AccountServerBaseFragment
     private final static String STATE_KEY_LOADED = "AccountSetupIncomingFragment.loaded";
 
     private EditText mUsernameView;
+    private TextView mDomainLabel;
+    private EditText mDomainNameView;
     private AuthenticationView mAuthenticationView;
     private TextView mAuthenticationLabel;
     private TextView mServerLabelView;
@@ -132,6 +134,8 @@ public class AccountSetupIncomingFragment extends AccountServerBaseFragment
         }
 
         mUsernameView = UiUtilities.getView(view, R.id.account_username);
+        mDomainLabel = UiUtilities.getView(view, R.id.account_domainLabel);
+        mDomainNameView = UiUtilities.getView(view, R.id.account_domainName);
         mServerLabelView = UiUtilities.getView(view, R.id.account_server_label);
         mServerView = UiUtilities.getView(view, R.id.account_server);
         mPortView = UiUtilities.getView(view, R.id.account_port);
@@ -172,6 +176,9 @@ public class AccountSetupIncomingFragment extends AccountServerBaseFragment
             public void onTextChanged(CharSequence s, int start, int before, int count) { }
         };
 
+        if (getResources().getBoolean(R.bool.enable_separate_domain_field)) {
+            mDomainNameView.addTextChangedListener(mValidationTextWatcher);
+        }
         mUsernameView.addTextChangedListener(mValidationTextWatcher);
         mServerView.addTextChangedListener(mValidationTextWatcher);
         mPortView.addTextChangedListener(mValidationTextWatcher);
@@ -282,6 +289,10 @@ public class AccountSetupIncomingFragment extends AccountServerBaseFragment
     public void onDestroyView() {
         // Make sure we don't get callbacks after the views are supposed to be destroyed
         // and also don't hold onto them longer than we need
+        if(mDomainNameView != null){
+            mDomainNameView.removeTextChangedListener(mValidationTextWatcher);
+        }
+        mDomainNameView = null;
         if (mUsernameView != null) {
             mUsernameView.removeTextChangedListener(mValidationTextWatcher);
         }
@@ -357,7 +368,7 @@ public class AccountSetupIncomingFragment extends AccountServerBaseFragment
         final boolean offerOAuth = (mServiceInfo.offerOAuth && oauthProviders.size() > 0);
         mAuthenticationView.setAuthInfo(offerOAuth, recvAuth);
 
-        final String username = recvAuth.mLogin;
+        String username = recvAuth.mLogin;
         if (username != null) {
             //*** For eas?
             // Add a backslash to the start of the username, but only if the username has no
@@ -365,6 +376,14 @@ public class AccountSetupIncomingFragment extends AccountServerBaseFragment
             //if (userName.indexOf('\\') < 0) {
             //    userName = "\\" + userName;
             //}
+            // code check for Exchnage account type, to show domainName in seperate field.
+            if (getResources().getBoolean(R.bool.enable_separate_domain_field)) {
+                if ((mServiceInfo.offerCerts) && (username.contains("/"))) {
+                    final String[] userNameDomainArray = username.split("/");
+                    mDomainNameView.setText(userNameDomainArray[0]);
+                    username = userNameDomainArray[1];
+                }
+            }
             mUsernameView.setText(username);
         }
 
@@ -421,12 +440,24 @@ public class AccountSetupIncomingFragment extends AccountServerBaseFragment
      */
     private void validateFields() {
         if (!mLoaded) return;
-        enableNextButton(!TextUtils.isEmpty(mUsernameView.getText())
-                && mAuthenticationView.getAuthValid()
-                && Utility.isServerNameValid(mServerView)
-                && Utility.isPortFieldValid(mPortView));
+        if (getResources().getBoolean(R.bool.enable_separate_domain_field) &&
+                (mDomainNameView.getVisibility() == View.VISIBLE)) {
+            enableNextButton(!TextUtils.isEmpty(mUsernameView.getText())
+                    && !TextUtils.isEmpty(mDomainNameView.getText())
+                    && mAuthenticationView.getAuthValid()
+                    && Utility.isServerNameValid(mServerView)
+                    && Utility.isPortFieldValid(mPortView));
 
-        mCacheLoginCredential = mUsernameView.getText().toString().trim();
+            mCacheLoginCredential = getDomainPrefix()+mUsernameView.getText().toString().trim();
+        }
+        else {
+            enableNextButton(!TextUtils.isEmpty(mUsernameView.getText())
+                    && mAuthenticationView.getAuthValid()
+                    && Utility.isServerNameValid(mServerView)
+                    && Utility.isPortFieldValid(mPortView));
+
+            mCacheLoginCredential = mUsernameView.getText().toString().trim();
+        }
     }
 
     private int getPortFromSecurityType(boolean useSsl) {
@@ -443,6 +474,18 @@ public class AccountSetupIncomingFragment extends AccountServerBaseFragment
         if (mServiceInfo.offerCerts) {
             final int mode = useSsl ? View.VISIBLE : View.GONE;
             mClientCertificateSelector.setVisibility(mode);
+            if (getResources().getBoolean(R.bool.enable_separate_domain_field)) {
+                mDomainLabel.setVisibility(View.VISIBLE);
+                mDomainNameView.setVisibility(View.VISIBLE);
+            }
+            else {
+                if (mDomainLabel != null) {
+                    mDomainLabel.setVisibility(View.GONE);
+                }
+                if (mDomainNameView != null) {
+                    mDomainNameView.setVisibility(View.GONE);
+                }
+            }
             String deviceId = "";
             try {
                 deviceId = Device.getDeviceId(mAppContext);
@@ -452,6 +495,13 @@ public class AccountSetupIncomingFragment extends AccountServerBaseFragment
             ((TextView) UiUtilities.getView(getView(), R.id.device_id)).setText(deviceId);
 
             mDeviceIdSection.setVisibility(mode);
+        } else {
+            if (mDomainLabel != null) {
+                mDomainLabel.setVisibility(View.GONE);
+            }
+            if (mDomainNameView != null) {
+                mDomainNameView.setVisibility(View.GONE);
+            }
         }
     }
 
@@ -554,7 +604,12 @@ public class AccountSetupIncomingFragment extends AccountServerBaseFragment
         }
 
         final HostAuth recvAuth = account.getOrCreateHostAuthRecv(mAppContext);
-        final String userName = mUsernameView.getText().toString().trim();
+        String userName = null;
+        if (getResources().getBoolean(R.bool.enable_separate_domain_field)) {
+            userName = getDomainPrefix()+mUsernameView.getText().toString().trim();
+        } else {
+            userName = mUsernameView.getText().toString().trim();
+        }
         final String userPassword = mAuthenticationView.getPassword();
         recvAuth.setLogin(userName, userPassword);
         if (!TextUtils.isEmpty(mAuthenticationView.getOAuthProvider())) {
@@ -610,8 +665,15 @@ public class AccountSetupIncomingFragment extends AccountServerBaseFragment
         // Launch the credentials activity.
         final String protocol =
                 mSetupData.getAccount().getOrCreateHostAuthRecv(mAppContext).mProtocol;
+        String userNameString = "";
+        if (getResources().getBoolean(R.bool.enable_separate_domain_field)) {
+            userNameString = getDomainPrefix()+mUsernameView.getText().toString();
+        }
+        else {
+            userNameString = mUsernameView.getText().toString();
+        }
         final Intent intent = AccountCredentials.getAccountCredentialsIntent(getActivity(),
-                mUsernameView.getText().toString(), protocol);
+                userNameString, protocol);
         startActivityForResult(intent, SIGN_IN_REQUEST);
     }
 
@@ -643,5 +705,14 @@ public class AccountSetupIncomingFragment extends AccountServerBaseFragment
                     data.getExtras());
             mAuthenticationView.setAuthInfo(mServiceInfo.offerOAuth, recvAuth);
         }
+    }
+
+    private String getDomainPrefix(){
+        String domainPrefix = "";
+        // this will be true only for exchange account
+        if(mDomainNameView != null && mServiceInfo.offerCerts){
+            domainPrefix = mDomainNameView.getText().toString().trim()+"/";
+        }
+        return domainPrefix;
     }
 }

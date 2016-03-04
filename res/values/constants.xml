@@ -43,4 +43,7 @@
 
     <!--Enable brand name in email signature -->
     <bool name="config_email_signature_with_brand">false</bool>
+
+    <!-- Enable/Disable separate domain field -->
+    <bool name="enable_separate_domain_field">false</bool>
 </resources>
