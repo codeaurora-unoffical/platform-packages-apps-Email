@@ -327,7 +327,7 @@ public final class DBHelper {
         // This String and the following String MUST have the same columns, except for the type
         // of those columns!
         String createString = " (" + BaseColumns._ID + " integer primary key autoincrement, "
-            + SyncColumns.SERVER_ID + " text, "
+            + SyncColumns.SERVER_ID + " text UNIQUE, "
             + SyncColumns.SERVER_TIMESTAMP + " integer, "
             + messageColumns;
 

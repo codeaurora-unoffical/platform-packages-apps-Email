@@ -371,7 +371,9 @@ public class Pop3Service extends Service {
                     Pop3Message popMessage =
                             (Pop3Message)remoteFolder.getMessage(currentMsg.mServerId);
                     if (popMessage != null) {
+                        if(account.getDeletePolicy() == 2) {
                         remoteFolder.deleteMessage(popMessage);
+                        }
                     }
                 }
                 // Finally, delete the update
