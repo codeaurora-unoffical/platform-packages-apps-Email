@@ -249,6 +249,8 @@
     <string name="account_setup_incoming_imap_path_prefix_label">IMAP path prefix</string>
     <!-- "Incoming server settings" screen, hint for setting IMAP path prefix: -->
     <string name="account_setup_incoming_imap_path_prefix_hint">Optional</string>
+    <!-- "Incoming server settings" screen, label for Domainname -->
+    <string name="account_setup_incoming_domain_label">Domain</string>
 
     <!-- "Outgoing server settings" screen, headline (text over divider) [CHAR LIMIT=none] -->
     <string name="account_setup_outgoing_headline">Outgoing server settings</string>
