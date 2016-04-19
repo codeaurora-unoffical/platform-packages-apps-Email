@@ -49,6 +49,7 @@ public class AttachmentUtilities {
     public static final String FORMAT_RAW = "RAW";
     public static final String FORMAT_THUMBNAIL = "THUMBNAIL";
 
+    public static final String ANDROID_ARCHIVE = "application/vnd.android.package-archive";
     public static class Columns {
         public static final String _ID = "_id";
         public static final String DATA = "_data";
@@ -455,6 +456,11 @@ public class AttachmentUtilities {
                 final String mimeType = TextUtils.isEmpty(attachment.mMimeType) ?
                         "application/octet-stream" :
                         attachment.mMimeType;
+
+                if (ANDROID_ARCHIVE.equals(mimeType)) {
+                    cv.put(AttachmentColumns.CONTENT_URI, Uri.fromFile(file).toString());
+                    context.getContentResolver().update(uri, cv, null, null);
+                }
 
                 try {
                     DownloadManager dm =
