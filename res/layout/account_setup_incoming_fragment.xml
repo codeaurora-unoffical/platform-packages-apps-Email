@@ -22,6 +22,20 @@
     android:orientation="vertical" >
 
     <TextView
+        android:id="@+id/account_domainLabel"
+        android:text="@string/account_setup_incoming_domain_label"
+        android:layout_height="wrap_content"
+        android:layout_width="match_parent"
+        style="@style/account_setup_label_text"
+        android:visibility="gone"/>
+    <EditText
+        android:id="@+id/account_domainName"
+        android:layout_height="wrap_content"
+        android:layout_width="match_parent"
+        android:hint="@string/account_setup_incoming_domain_label"
+        android:visibility="gone"/>
+
+    <TextView
         android:text="@string/account_setup_incoming_username_label"
         android:layout_height="wrap_content"
         android:layout_width="match_parent"
