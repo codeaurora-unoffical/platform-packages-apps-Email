@@ -27,12 +27,14 @@ import com.android.email.R;
  */
 public class RequestPermissionsActivity extends RequestPermissionsActivityBase {
 
+    private final static String READ_ATTACHMENT = "com.android.email.permission.READ_ATTACHMENT";
     private static final String[] REQUIRED_PERMISSIONS = new String[]{
             permission.READ_CONTACTS, // Contacts group
             permission.READ_EXTERNAL_STORAGE,
             permission.READ_CALENDAR, // Calendar group
             permission.GET_ACCOUNTS,
-            permission.READ_PHONE_STATE
+            permission.READ_PHONE_STATE,
+            READ_ATTACHMENT
     };
 
     @Override
@@ -47,7 +49,8 @@ public class RequestPermissionsActivity extends RequestPermissionsActivityBase {
                 permission.READ_EXTERNAL_STORAGE,
                 permission.READ_CALENDAR, // Calendar group
                 permission.GET_ACCOUNTS,
-                permission.READ_PHONE_STATE
+                permission.READ_PHONE_STATE,
+                READ_ATTACHMENT
        };
     }
 
