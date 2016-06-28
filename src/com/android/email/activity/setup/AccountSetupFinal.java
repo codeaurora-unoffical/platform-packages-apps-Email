@@ -521,7 +521,7 @@ public class AccountSetupFinal extends AccountSetupActivity
         if (addToBackstack) {
             ft.addToBackStack(backstackTag);
         }
-        ft.commit();
+        ft.commitAllowingStateLoss();
 
         final InputMethodManager imm =
                 (InputMethodManager)getSystemService(Context.INPUT_METHOD_SERVICE);
@@ -1026,7 +1026,7 @@ public class AccountSetupFinal extends AccountSetupActivity
         getFragmentManager().beginTransaction()
                 .add(f, AccountCheckSettingsFragment.TAG)
                 .add(d, CheckSettingsProgressDialogFragment.TAG)
-                .commit();
+                .commitAllowingStateLoss();
     }
 
     @Override
@@ -1042,7 +1042,7 @@ public class AccountSetupFinal extends AccountSetupActivity
         getFragmentManager().beginTransaction()
                 .remove(f)
                 .remove(d)
-                .commit();
+                .commitAllowingStateLoss();
     }
 
     @Override
@@ -1203,7 +1203,7 @@ public class AccountSetupFinal extends AccountSetupActivity
                 syncContacts, enableNotifications);
         final FragmentTransaction ft = getFragmentManager().beginTransaction();
         ft.add(f, AccountCreationFragment.TAG);
-        ft.commit();
+        ft.commitAllowingStateLoss();
 
         showCreateAccountDialog();
     }
@@ -1240,7 +1240,7 @@ public class AccountSetupFinal extends AccountSetupActivity
         }
         getFragmentManager().beginTransaction()
                 .remove(f)
-                .commit();
+                .commitAllowingStateLoss();
     }
 
 
@@ -1327,7 +1327,7 @@ public class AccountSetupFinal extends AccountSetupActivity
         final Fragment f = AccountFinalizeFragment.newInstance(account);
         final FragmentTransaction ft = getFragmentManager().beginTransaction();
         ft.add(f, AccountFinalizeFragment.TAG);
-        ft.commit();
+        ft.commitAllowingStateLoss();
     }
 
     /**
