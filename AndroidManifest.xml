@@ -57,7 +57,7 @@
     <!-- STOPSHIP: protectionLevel should not be dangerous -->
     <permission
         android:name="com.android.email.permission.READ_ATTACHMENT"
-        android:permissionGroup="android.permission-group.MESSAGES"
+        android:permissionGroup="android.permission-group.SMS"
         android:protectionLevel="dangerous"
         android:label="@string/permission_read_attachment_label"
         android:description="@string/permission_read_attachment_desc"/>
