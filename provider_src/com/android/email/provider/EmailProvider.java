@@ -2256,6 +2256,9 @@ public class EmailProvider extends ContentProvider
     }
 
     private void updateSyncStatus(final Bundle extras) {
+        if (extras == null) {
+            return;
+        }
         final long id = extras.getLong(EmailServiceStatus.SYNC_STATUS_ID);
         final int statusCode = extras.getInt(EmailServiceStatus.SYNC_STATUS_CODE);
         final Uri uri = ContentUris.withAppendedId(FOLDER_STATUS_URI, id);
