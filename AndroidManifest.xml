@@ -636,7 +636,7 @@
         </service>
 
         <service
-            android:name=".service.AliceAuthenticatorService"
+            android:name=".service.ExtendAuthenticatorService$DefaultFirstAuthenticatorService"
             android:exported="true"
             android:enabled="true"
             >
@@ -646,12 +646,12 @@
             </intent-filter>
             <meta-data
                 android:name="android.accounts.AccountAuthenticator"
-                android:resource="@xml/authenticator_alice"
+                android:resource="@xml/authenticator_default_first"
                 />
         </service>
 
         <service
-            android:name=".service.YahooAuthenticatorService"
+            android:name=".service.ExtendAuthenticatorService$DefaultSecondAuthenticatorService"
             android:exported="true"
             android:enabled="true"
             >
@@ -661,12 +661,12 @@
             </intent-filter>
             <meta-data
                 android:name="android.accounts.AccountAuthenticator"
-                android:resource="@xml/authenticator_yahoo"
+                android:resource="@xml/authenticator_default_second"
                 />
         </service>
 
         <service
-            android:name=".service.OutLookAuthenticatorService"
+            android:name=".service.ExtendAuthenticatorService$DefaultThirdAuthenticatorService"
             android:exported="true"
             android:enabled="true"
             >
@@ -676,12 +676,12 @@
             </intent-filter>
             <meta-data
                 android:name="android.accounts.AccountAuthenticator"
-                android:resource="@xml/authenticator_outlook"
+                android:resource="@xml/authenticator_default_third"
                 />
         </service>
 
         <service
-            android:name=".service.GmailAuthenticatorService"
+            android:name=".service.ExtendAuthenticatorService$DefaultFourthAuthenticatorService"
             android:exported="true"
             android:enabled="true"
             >
@@ -691,12 +691,12 @@
             </intent-filter>
             <meta-data
                 android:name="android.accounts.AccountAuthenticator"
-                android:resource="@xml/authenticator_gmail"
+                android:resource="@xml/authenticator_default_fourth"
                 />
         </service>
 
         <service
-            android:name=".service.OrangeAuthenticatorService"
+            android:name=".service.ExtendAuthenticatorService$DefaultFifthAuthenticatorService"
             android:exported="true"
             android:enabled="true"
             >
@@ -706,7 +706,232 @@
             </intent-filter>
             <meta-data
                 android:name="android.accounts.AccountAuthenticator"
-                android:resource="@xml/authenticator_orange"
+                android:resource="@xml/authenticator_default_fifth"
+                />
+        </service>
+
+        <service
+            android:name=".service.ExtendAuthenticatorService$DefaultSixthAuthenticatorService"
+            android:exported="true"
+            android:enabled="true"
+            >
+            <intent-filter>
+                <action
+                    android:name="android.accounts.AccountAuthenticator" />
+            </intent-filter>
+            <meta-data
+                android:name="android.accounts.AccountAuthenticator"
+                android:resource="@xml/authenticator_default_sixth"
+                />
+        </service>
+
+        <service
+            android:name=".service.ExtendAuthenticatorService$DefaultSeventhAuthenticatorService"
+            android:exported="true"
+            android:enabled="true"
+            >
+            <intent-filter>
+                <action
+                    android:name="android.accounts.AccountAuthenticator" />
+            </intent-filter>
+            <meta-data
+                android:name="android.accounts.AccountAuthenticator"
+                android:resource="@xml/authenticator_default_seventh"
+                />
+        </service>
+
+        <service
+            android:name=".service.ExtendAuthenticatorService$DefaultEighthAuthenticatorService"
+            android:exported="true"
+            android:enabled="true"
+            >
+            <intent-filter>
+                <action
+                    android:name="android.accounts.AccountAuthenticator" />
+            </intent-filter>
+            <meta-data
+                android:name="android.accounts.AccountAuthenticator"
+                android:resource="@xml/authenticator_default_eighth"
+                />
+        </service>
+
+        <service
+            android:name=".service.ExtendAuthenticatorService$DefaultNinthAuthenticatorService"
+            android:exported="true"
+            android:enabled="true"
+            >
+            <intent-filter>
+                <action
+                    android:name="android.accounts.AccountAuthenticator" />
+            </intent-filter>
+            <meta-data
+                android:name="android.accounts.AccountAuthenticator"
+                android:resource="@xml/authenticator_default_ninth"
+                />
+        </service>
+
+        <service
+            android:name=".service.ExtendAuthenticatorService$DefaultTenthAuthenticatorService"
+            android:exported="true"
+            android:enabled="true"
+            >
+            <intent-filter>
+                <action
+                    android:name="android.accounts.AccountAuthenticator" />
+            </intent-filter>
+            <meta-data
+                android:name="android.accounts.AccountAuthenticator"
+                android:resource="@xml/authenticator_default_tenth"
+                />
+        </service>
+
+        <service
+            android:name=".service.ExtendAuthenticatorService$DefaultEleventhAuthenticatorService"
+            android:exported="true"
+            android:enabled="true"
+            >
+            <intent-filter>
+                <action
+                    android:name="android.accounts.AccountAuthenticator" />
+            </intent-filter>
+            <meta-data
+                android:name="android.accounts.AccountAuthenticator"
+                android:resource="@xml/authenticator_default_eleventh"
+                />
+        </service>
+
+        <service
+            android:name=".service.ExtendAuthenticatorService$DefaultTwelfthAuthenticatorService"
+            android:exported="true"
+            android:enabled="true"
+            >
+            <intent-filter>
+                <action
+                    android:name="android.accounts.AccountAuthenticator" />
+            </intent-filter>
+            <meta-data
+                android:name="android.accounts.AccountAuthenticator"
+                android:resource="@xml/authenticator_default_twelfth"
+                />
+        </service>
+
+        <service
+            android:name=".service.ExtendAuthenticatorService$DefaultThirteenthAuthenticatorService"
+            android:exported="true"
+            android:enabled="true"
+            >
+            <intent-filter>
+                <action
+                    android:name="android.accounts.AccountAuthenticator" />
+            </intent-filter>
+            <meta-data
+                android:name="android.accounts.AccountAuthenticator"
+                android:resource="@xml/authenticator_default_thirteenth"
+                />
+        </service>
+
+        <service
+            android:name=".service.ExtendAuthenticatorService$DefaultFourteenthAuthenticatorService"
+            android:exported="true"
+            android:enabled="true"
+            >
+            <intent-filter>
+                <action
+                    android:name="android.accounts.AccountAuthenticator" />
+            </intent-filter>
+            <meta-data
+                android:name="android.accounts.AccountAuthenticator"
+                android:resource="@xml/authenticator_default_fourteenth"
+                />
+        </service>
+
+        <service
+            android:name=".service.ExtendAuthenticatorService$DefaultFifteenthAuthenticatorService"
+            android:exported="true"
+            android:enabled="true"
+            >
+            <intent-filter>
+                <action
+                    android:name="android.accounts.AccountAuthenticator" />
+            </intent-filter>
+            <meta-data
+                android:name="android.accounts.AccountAuthenticator"
+                android:resource="@xml/authenticator_default_fifteenth"
+                />
+        </service>
+
+        <service
+            android:name=".service.ExtendAuthenticatorService$DefaultSixteenthAuthenticatorService"
+            android:exported="true"
+            android:enabled="true"
+            >
+            <intent-filter>
+                <action
+                    android:name="android.accounts.AccountAuthenticator" />
+            </intent-filter>
+            <meta-data
+                android:name="android.accounts.AccountAuthenticator"
+                android:resource="@xml/authenticator_default_sixteenth"
+                />
+        </service>
+
+        <service
+            android:name=".service.ExtendAuthenticatorService$DefaultSeventeenthAuthenticatorService"
+            android:exported="true"
+            android:enabled="true"
+            >
+            <intent-filter>
+                <action
+                    android:name="android.accounts.AccountAuthenticator" />
+            </intent-filter>
+            <meta-data
+                android:name="android.accounts.AccountAuthenticator"
+                android:resource="@xml/authenticator_default_seventeenth"
+                />
+        </service>
+
+        <service
+            android:name=".service.ExtendAuthenticatorService$DefaultEighteenthAuthenticatorService"
+            android:exported="true"
+            android:enabled="true"
+            >
+            <intent-filter>
+                <action
+                    android:name="android.accounts.AccountAuthenticator" />
+            </intent-filter>
+            <meta-data
+                android:name="android.accounts.AccountAuthenticator"
+                android:resource="@xml/authenticator_default_eighteenth"
+                />
+        </service>
+
+        <service
+            android:name=".service.ExtendAuthenticatorService$DefaultNinteenthAuthenticatorService"
+            android:exported="true"
+            android:enabled="true"
+            >
+            <intent-filter>
+                <action
+                    android:name="android.accounts.AccountAuthenticator" />
+            </intent-filter>
+            <meta-data
+                android:name="android.accounts.AccountAuthenticator"
+                android:resource="@xml/authenticator_default_ninteenth"
+                />
+        </service>
+
+        <service
+            android:name=".service.ExtendAuthenticatorService$DefaultTwentithAuthenticatorService"
+            android:exported="true"
+            android:enabled="true"
+            >
+            <intent-filter>
+                <action
+                    android:name="android.accounts.AccountAuthenticator" />
+            </intent-filter>
+            <meta-data
+                android:name="android.accounts.AccountAuthenticator"
+                android:resource="@xml/authenticator_default_twentith"
                 />
         </service>
         <!--Required stanza to register the EasTestAuthenticatorService with AccountManager -->
