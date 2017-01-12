@@ -40,4 +40,8 @@
 
     <!-- Boolean value to show Customize Email signature with brand -->
     <bool name="config_email_signature_with_brand">false</bool>
+    <!-- Boolean value indicating whether modify email sync default size -->
+    <bool name="customize_email_sync_default_size">false</bool>
+    <!-- Customize Email sync size choice,default 307200 -->
+    <integer name="customize_mail_sync_default_size">307200</integer>
 </resources>
