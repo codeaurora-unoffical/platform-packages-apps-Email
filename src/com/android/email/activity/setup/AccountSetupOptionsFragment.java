@@ -265,8 +265,15 @@ public class AccountSetupOptionsFragment extends AccountSetupFragment {
         for (int i = 0; i < sizeEntries.length; ++i) {
             final int value = Integer.valueOf(sizeValues[i].toString());
             syncSizes[i] = new SpinnerOption(value, sizeEntries[i].toString());
-            if (value == SyncSize.SYNC_SIZE_DEFAULT_VALUE) {
-                defaultIndex = i;
+            if(getResources().getBoolean(R.bool.customize_email_sync_default_size)) {
+                if (value == getResources().getInteger(R.integer.
+                        customize_mail_sync_default_size)) {
+                     defaultIndex = i;
+                }
+            }else{
+                if (value == SyncSize.SYNC_SIZE_DEFAULT_VALUE) {
+                    defaultIndex = i;
+                }
             }
         }
 

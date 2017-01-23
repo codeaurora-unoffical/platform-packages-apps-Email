@@ -60,8 +60,9 @@ public class AccountService extends Service {
                     public void run() {
                         // Make sure remote services are running (re: lifecycle)
                         EmailServiceUtils.startRemoteServices(mContext);
-                        // Send current logging flags
-                        DebugUtils.updateLoggingFlags(mContext);
+                        // Send current logging flags, need disable it first
+                        //it may cause ServiceConnection leak when bindService
+                        // DebugUtils.updateLoggingFlags(mContext);
                     }});
                 return Device.getDeviceId(mContext);
             } catch (IOException e) {
