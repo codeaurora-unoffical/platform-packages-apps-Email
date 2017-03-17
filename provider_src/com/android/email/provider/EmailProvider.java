@@ -2100,6 +2100,7 @@ public class EmailProvider extends ContentProvider
                             selectionArgs);
                     if (match == MESSAGE_ID || match == SYNCED_MESSAGE_ID) {
                         handleMessageUpdateNotifications(uri, id, values);
+                        notifyVirtualMailBoxWidget(values,uri);
                     } else if (match == ATTACHMENT_ID) {
                         long attId = Integer.parseInt(id);
                         if (values.containsKey(AttachmentColumns.FLAGS)) {
@@ -6348,11 +6349,37 @@ public class EmailProvider extends ContentProvider
 
         // If our mailbox needs to be notified, do so...
         if (mWidgetNotifyMailboxes.contains(mailboxId)) {
-            Intent intent = new Intent(Utils.ACTION_NOTIFY_DATASET_CHANGED);
-            intent.putExtra(Utils.EXTRA_FOLDER_URI, uiUri("uifolder", mailboxId));
-            intent.setType(EMAIL_APP_MIME_TYPE);
-            context.sendBroadcast(intent);
-         }
+            Intent intent = new Intent();
+            if (isVirtualMailbox(mailboxId)) {
+                intent.setAction(Utils.ACTION_WIDGET_FOLDER_UPDATE);
+                Bundle extras = new Bundle();
+                extras.putParcelable(Utils.EXTRA_FOLDER_URI, uiUri("uifolder", mailboxId));
+                extras.putParcelable(Utils.EXTRA_CONVERSATIONLIST_URI, uiUri("uimessages", mailboxId));
+                intent.putExtras(extras);
+                context.sendBroadcast(intent);
+            } else {
+                intent.setAction(Utils.ACTION_NOTIFY_DATASET_CHANGED);
+                intent.putExtra(Utils.EXTRA_FOLDER_URI, uiUri("uifolder", mailboxId));
+                intent.setType(EMAIL_APP_MIME_TYPE);
+                context.sendBroadcast(intent);
+            }
+        }
+    }
+
+    private void notifyVirtualMailBoxWidget(ContentValues values, Uri uri) {
+        if (values.containsKey(MessageColumns.FLAG_FAVORITE)
+                || values.containsKey(MessageColumns.FLAG_READ)) {
+            Message msg = Message.restoreMessageWithId(getContext(),
+                     Long.parseLong(uri.getLastPathSegment()));
+            if (msg == null) {
+                return;
+            }
+            if (values.containsKey(MessageColumns.FLAG_FAVORITE)) {
+                 notifyWidgets(getVirtualMailboxId(msg.mAccountKey, Mailbox.TYPE_STARRED));
+            } else if (values.containsKey(MessageColumns.FLAG_READ)) {
+                notifyWidgets(getVirtualMailboxId(msg.mAccountKey, Mailbox.TYPE_UNREAD));
+            }
+        }
     }
 
     @Override
