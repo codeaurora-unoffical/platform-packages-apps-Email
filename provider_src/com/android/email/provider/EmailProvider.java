@@ -6371,6 +6371,9 @@ public class EmailProvider extends ContentProvider
                 || values.containsKey(MessageColumns.FLAG_READ)) {
             Message msg = Message.restoreMessageWithId(getContext(),
                      Long.parseLong(uri.getLastPathSegment()));
+            if (msg == null) {
+                return;
+            }
             if (values.containsKey(MessageColumns.FLAG_FAVORITE)) {
                  notifyWidgets(getVirtualMailboxId(msg.mAccountKey, Mailbox.TYPE_STARRED));
             } else if (values.containsKey(MessageColumns.FLAG_READ)) {
