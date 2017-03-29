@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+ifneq ($(TARGET_USES_AOSP),true)
+
 LOCAL_PATH:= $(call my-dir)
 
 src_dirs := src
@@ -38,3 +40,5 @@ include $(BUILD_PACKAGE)
 
 # Build all sub-directories
 include $(call all-makefiles-under,$(LOCAL_PATH))
+
+endif
