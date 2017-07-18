@@ -184,7 +184,7 @@ public class AccountSetupFinal extends AccountSetupActivity
     @Override
     public void onCreate(Bundle savedInstanceState) {
         if (RequestPermissionsActivity.startPermissionActivity(this)) {
-            finish();
+            return;
         }
         super.onCreate(savedInstanceState);
 
@@ -447,6 +447,16 @@ public class AccountSetupFinal extends AccountSetupActivity
             // fully created before querying it.
             // This will call initiateAccountCreation() for us
             proceed();
+        }
+    }
+
+    @Override
+    protected void onPostResume() {
+        super.onPostResume();
+        AccountCheckSettingsFragment fragment = (AccountCheckSettingsFragment)
+                getFragmentManager().findFragmentByTag(AccountCheckSettingsFragment.TAG);
+        if (fragment != null) {
+            fragment.checkResult();
         }
     }
 
