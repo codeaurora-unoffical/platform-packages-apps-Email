@@ -16,21 +16,15 @@
 
 package com.android.email2.ui;
 
-import android.content.ComponentName;
 import android.content.ContentResolver;
-import android.content.Context;
 import android.content.Intent;
 import android.content.UriMatcher;
-import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.net.Uri;
 import android.os.Bundle;
 
-import com.android.email.Preferences;
 import com.android.email.activity.RequestPermissionsActivity;
 import com.android.email.provider.EmailProvider;
-import com.android.email.service.AttachmentService;
-import com.android.email.service.EmailServiceUtils;
 import com.android.emailcommon.Logging;
 import com.android.emailcommon.TempDirectory;
 import com.android.emailcommon.provider.Mailbox;
@@ -59,7 +53,7 @@ public class MailActivityEmail extends com.android.mail.ui.MailActivity {
     @Override
     public void onCreate(Bundle bundle) {
         if (RequestPermissionsActivity.startPermissionActivity(this)) {
-            finish();
+            return;
         }
         final Intent intent = getIntent();
         final Uri data = intent != null ? intent.getData() : null;
