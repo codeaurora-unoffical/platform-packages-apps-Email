@@ -183,10 +183,10 @@ public class AccountSetupFinal extends AccountSetupActivity
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
         if (RequestPermissionsActivity.startPermissionActivity(this)) {
             return;
         }
-        super.onCreate(savedInstanceState);
 
         final Intent intent = getIntent();
         final String action = intent.getAction();

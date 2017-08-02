@@ -52,9 +52,6 @@ public class MailActivityEmail extends com.android.mail.ui.MailActivity {
 
     @Override
     public void onCreate(Bundle bundle) {
-        if (RequestPermissionsActivity.startPermissionActivity(this)) {
-            return;
-        }
         final Intent intent = getIntent();
         final Uri data = intent != null ? intent.getData() : null;
         if (data != null) {
@@ -78,6 +75,10 @@ public class MailActivityEmail extends com.android.mail.ui.MailActivity {
         }
 
         super.onCreate(bundle);
+        if (RequestPermissionsActivity.startPermissionActivity(this)) {
+            return;
+        }
+
         TempDirectory.setTempDirectory(this);
 
         // Make sure all required services are running when the app is started (can prevent
