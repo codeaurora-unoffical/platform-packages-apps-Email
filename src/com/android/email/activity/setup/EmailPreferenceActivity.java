@@ -94,10 +94,10 @@ public class EmailPreferenceActivity extends MailPreferenceActivity {
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
         if (RequestPermissionsActivity.startPermissionActivity(this)) {
             return;
         }
-        super.onCreate(savedInstanceState);
 
         final Intent i = getIntent();
         if (savedInstanceState == null) {
