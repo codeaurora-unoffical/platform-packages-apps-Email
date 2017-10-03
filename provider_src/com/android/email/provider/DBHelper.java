@@ -184,7 +184,7 @@ public final class DBHelper {
     // Version 126: Decode address lists for To, From, Cc, Bcc and Reply-To columns in Message.
     // Version 127: Force mFlags to contain the correct flags for EAS accounts given a protocol
     //              version above 12.0
-    public static final int DATABASE_VERSION = 127;
+    public static final int DATABASE_VERSION = 128;
 
     // Any changes to the database format *must* include update-in-place code.
     // Original version: 2
