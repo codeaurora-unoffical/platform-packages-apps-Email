@@ -25,7 +25,7 @@ import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.net.Uri;
 import android.os.Bundle;
-
+import com.android.email.activity.RequestPermissionsActivity;
 import com.android.email.Preferences;
 import com.android.email.provider.EmailProvider;
 import com.android.email.service.AttachmentService;
@@ -80,6 +80,10 @@ public class MailActivityEmail extends com.android.mail.ui.MailActivity {
         }
 
         super.onCreate(bundle);
+        if (RequestPermissionsActivity.startPermissionActivity(this)) {
+            return;
+        }
+
         TempDirectory.setTempDirectory(this);
 
         // Make sure all required services are running when the app is started (can prevent
