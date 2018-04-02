@@ -124,6 +124,8 @@ public class AccountSetupFinal extends AccountSetupActivity
     private static final String SAVESTATE_KEY_IS_PRE_CONFIGURED = "AccountSetupFinal.preconfig";
     private static final String SAVESTATE_KEY_SKIP_AUTO_DISCOVER = "AccountSetupFinal.noAuto";
     private static final String SAVESTATE_KEY_PASSWORD_FAILED = "AccountSetupFinal.passwordFailed";
+    private static final String SAVESTATE_KEY_ACCOUNT_CREATION_READY =
+            "AccountSetupFinal.accountCreationReady";
 
     private static final String CONTENT_FRAGMENT_TAG = "AccountSetupContentFragment";
     private static final String CREDENTIALS_BACKSTACK_TAG = "AccountSetupCredentialsFragment";
@@ -181,6 +183,8 @@ public class AccountSetupFinal extends AccountSetupActivity
     private static final int EXISTING_ACCOUNTS_LOADER_ID = 1;
     private Map<String, String> mExistingAccountsMap;
 
+    private boolean mAccountCreationReady = false;
+
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -217,6 +221,8 @@ public class AccountSetupFinal extends AccountSetupActivity
                     savedInstanceState.getBoolean(SAVESTATE_KEY_IS_PRE_CONFIGURED);
             mSkipAutoDiscover = savedInstanceState.getBoolean(SAVESTATE_KEY_SKIP_AUTO_DISCOVER);
             mPasswordFailed = savedInstanceState.getBoolean(SAVESTATE_KEY_PASSWORD_FAILED);
+            mAccountCreationReady = savedInstanceState.getBoolean(
+                    SAVESTATE_KEY_ACCOUNT_CREATION_READY);
         } else {
             // If we're not restoring from a previous state, we want to configure the initial screen
 
@@ -257,6 +263,10 @@ public class AccountSetupFinal extends AccountSetupActivity
             }
             updateContentFragment(false /* addToBackstack */);
             mPasswordFailed = false;
+        }
+
+        if (mAccountCreationReady) {
+            setResult(RESULT_OK);
         }
 
         if (!mIsProcessing && mSetupData.getFlowMode() ==
@@ -461,6 +471,7 @@ public class AccountSetupFinal extends AccountSetupActivity
                 mReportAccountAuthenticatorError);
         outState.putBoolean(SAVESTATE_KEY_IS_PRE_CONFIGURED, mIsPreConfiguredProvider);
         outState.putBoolean(SAVESTATE_KEY_PASSWORD_FAILED, mPasswordFailed);
+        outState.putBoolean(SAVESTATE_KEY_ACCOUNT_CREATION_READY, mAccountCreationReady);
     }
 
     @Override
@@ -1194,6 +1205,7 @@ public class AccountSetupFinal extends AccountSetupActivity
             mAccountAuthenticatorResponse = null;
             mReportAccountAuthenticatorError = false;
         }
+        mAccountCreationReady = true;
         setResult(RESULT_OK);
         proceed();
     }
