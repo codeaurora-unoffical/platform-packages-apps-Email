@@ -497,12 +497,6 @@
                 <action
                     android:name="org.codeaurora.email.intent.action.MAIL_SERVICE_SEND_PENDING" />
             </intent-filter>
-            <!-- To handle new message notifications -->
-            <intent-filter>
-                <action android:name="com.android.mail.action.update_notification"
-                        android:priority="-10" />
-                <data android:mimeType="@string/application_mime_type" />
-            </intent-filter>
             <!-- To handle secret code to activate the debug screen. -->
             <intent-filter>
                 <action
