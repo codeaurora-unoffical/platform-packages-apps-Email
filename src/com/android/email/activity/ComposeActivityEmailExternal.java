@@ -1,5 +1,5 @@
-/*
- * Copyright (C) 2014 The Android Open Source Project
+/**
+ * Copyright (C) 2018 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,18 +14,19 @@
  * limitations under the License.
  */
 
-package com.android.email;
-
-import androidx.test.filters.FlakyTest;
-
-import org.junit.Test;
+package com.android.email.activity;
 
 /**
- * Placeholder flaky test.
+ * A subclass of {@link ComposeActivityEmail} which is exported for other Android packages to open.
  */
-public class DummyFlakyTest {
+public class ComposeActivityEmailExternal extends ComposeActivityEmail {
 
-    @FlakyTest
-    @Test
-    public void imNotReallyFlaky() {}
+  /**
+   * Only relevant when WebView Compose is enabled. Change this when WebView
+   * Compose is enabled for Email.
+   */
+  @Override
+  public boolean isExternal() {
+      return false;
+  }
 }
