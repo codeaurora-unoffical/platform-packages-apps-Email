@@ -61,7 +61,13 @@ public class BluetoothEmailBroadcastReceiver extends EmailBroadcastReceiver {
 
     @Override
     public void onReceive(Context context, Intent intent) {
+        if (intent == null ) {
+            Log.d(TAG,"intent null "); return;
+        }
         String action = intent.getAction();
+        if (action == null ) {
+            Log.d(TAG,"action null "); return;
+        }
         Log.d(TAG,"Received " + action);
         if (ACTION_CHECK_MAIL.equals(action)) {
             Intent i;
@@ -158,27 +164,36 @@ public class BluetoothEmailBroadcastReceiver extends EmailBroadcastReceiver {
                 Log.i(TAG, "READ MESSAGE POP3 NOT Implemented");
             }
         } else if (ACTION_SEND_PENDING_MAIL.equals(action)) {
-            Intent i;
-            final long accountId = intent.getLongExtra(EXTRA_ACCOUNT, -1);
-            Log.d(TAG, "accountId is " + accountId);
-            Account account = Account.restoreAccountWithId(context, accountId);
-            if (account == null ) {
-                return;
-            }
-            String protocol = account.getProtocol(context);
-            Log.d(TAG, "protocol is " + protocol);
-            String legacyImapProtocol = context.getString(R.string.protocol_legacy_imap);
-            if (protocol.equals(legacyImapProtocol)) {
-                i = new Intent(context, BluetoothImapService.class);
-                i.setAction(intent.getAction());
-                i.putExtra(EXTRA_ACCOUNT,
-                        intent.getLongExtra(EXTRA_ACCOUNT, -1));
-                context.startService(i);
-            } else {
-                Log.i(TAG, "SEND MESSAGE POP3 NOT Implemented");
-            }
+            sendPendingIntent(context,intent,action);
         } else {
             EmailBroadcastProcessorService.processBroadcastIntent(context, intent);
         }
+    }
+
+    private void sendPendingIntent( final Context context, final Intent intent,
+        final String action){
+        Runnable r = new Runnable() {
+            public void run() {
+                Intent i;
+                final long accountId = intent.getLongExtra(EXTRA_ACCOUNT, -1);
+                Log.d(TAG, "accountId is " + accountId);
+                Account account = Account.restoreAccountWithId(context, accountId);
+                if (account == null ) {
+                    return;
+                }
+                String protocol = account.getProtocol(context);
+                Log.d(TAG, "protocol is " + protocol);
+                String legacyImapProtocol = context.getString(R.string.protocol_legacy_imap);
+                if (protocol.equals(legacyImapProtocol)) {
+                    i = new Intent(context, BluetoothImapService.class);
+                    i.setAction(intent.getAction());
+                    i.putExtra(EXTRA_ACCOUNT,
+                            intent.getLongExtra(EXTRA_ACCOUNT, -1));
+                    context.startService(i);
+                } else {
+                    Log.i(TAG, "SEND MESSAGE POP3 NOT Implemented");
+                }
+        }};
+        new Thread(r).start();
     }
 }
