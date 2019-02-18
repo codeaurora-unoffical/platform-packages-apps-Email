@@ -93,6 +93,7 @@ public class BluetoothImapService extends ImapService {
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
 
+        if (intent == null) return START_NOT_STICKY;
         final String action = intent.getAction();
         if (Logging.LOGD) {
             LogUtils.d(Logging.LOG_TAG, "Action: ", action);
@@ -183,12 +184,16 @@ public class BluetoothImapService extends ImapService {
             if (accountId <= -1 ) {
                  return START_NOT_STICKY;
             }
-            try {
-                mBinder.init(context);
-                mBinder.sendMail(accountId);
-            } catch (Exception e) {
-                LogUtils.e(Logging.LOG_TAG, "RemoteException " + e);
-            }
+            Runnable r = new Runnable() {
+            public void run() {
+                try {
+                    mBinder.init(context);
+                    mBinder.sendMail(accountId);
+                } catch (Exception e) {
+                    LogUtils.e(Logging.LOG_TAG, "RemoteException " + e);
+                }
+            }};
+            new Thread(r,"sendMail").start();
         }
 
         return Service.START_STICKY;
